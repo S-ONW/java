@@ -7,7 +7,7 @@ rem ============================================
 cd /d "%~dp0"
 
 echo 启动后端...
-start "SpringBoot后端-8081" "%~dp0启动后端.bat"
+start "SpringBoot后端-8081" "%~dp0..\启动后端.bat"
 
 echo 启动前端...
 start "Vue前端-5173" "%~dp0启动前端.bat"

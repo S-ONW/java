@@ -116,7 +116,7 @@ async function submit() {
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
 .reg-side{
-  background:linear-gradient(160deg,#ff5a3c,#ff8a5c);
+  background:linear-gradient(160deg,#4da3ff,#8cc8ff);
   color:#fff;padding:40px 28px;display:flex;flex-direction:column;justify-content:center;
 }
 .reg-side .emoji{font-size:52px;margin-bottom:12px}

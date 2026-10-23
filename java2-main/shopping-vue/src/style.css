@@ -1,6 +1,6 @@
 :root{
-  --primary:#ff5a3c; --primary-dark:#e8431f; --bg:#f6f7f9; --card:#ffffff;
-  --text:#1f2430; --muted:#8a90a0; --line:#ececf0; --shadow:0 6px 24px rgba(20,20,40,.08);
+  --primary:#4da3ff; --primary-dark:#1f8fef; --bg:#f2f7fc; --card:#ffffff;
+  --text:#1f2430; --muted:#8a90a0; --line:#e3ecf5; --shadow:0 6px 24px rgba(30,80,140,.08);
   --radius:16px; --star:#ffb400; --ok:#1ec98b; --header-bg:rgba(255,255,255,.92);
   --blue:#3a5cff; --warn:#ff9f1a;
 }
@@ -145,12 +145,12 @@ aside h3{font-size:13px;color:var(--muted);margin-bottom:10px;text-transform:upp
 .field{margin-bottom:12px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
 .field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);color:var(--text);outline:none;font-family:inherit}
 .addr-card{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.addr-card.on{border-color:var(--primary);background:rgba(255,90,60,.05)}
+.addr-card.on{border-color:var(--primary);background:rgba(77,163,255,.08)}
 .addr-card .def{font-size:11px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px}
 .addr-card .ops{display:flex;gap:10px;font-size:12px;color:var(--muted)}
 .pay{display:flex;gap:10px;flex-wrap:wrap}
 .pay .opt{flex:1;min-width:120px;border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;text-align:center}
-.pay .opt.on{border-color:var(--primary);background:rgba(255,90,60,.05)}
+.pay .opt.on{border-color:var(--primary);background:rgba(77,163,255,.08)}
 .pay .opt .ic{font-size:26px}.pay .opt .nm{font-size:14px;margin-top:4px;font-weight:600}
 .sum-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}
 .sum-row.big{font-size:18px;font-weight:800;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
