@@ -246,20 +246,37 @@ export async function submitRegister(nick, pwd) {
 }
 
 /**
- * 登录：以本地账号注册表为准进行严格校验——
- *  - 昵称未注册过 → 拒绝（昵称不存在，请先注册）
- *  - 密码不正确   → 拒绝（昵称或密码不正确）
- *  - 两者都正确   → 写入登录状态，返回成功
- * 无论后端是否启动，都必须"填对"才能登录成功。
+ * 登录：优先走 Spring Boot 后端（POST /api/user/login，用「昵称@shop.local」作为账号标识
+ * 与注册时一致），由 MySQL 校验昵称+密码；后端未启动则回退本地账号表校验。
+ * 登录方式不变：仍只用「昵称 + 密码」，不改成邮箱登录。
  * @returns {Promise<{ok:boolean, msg:string}>}
  */
 export async function submitAuth(name, pwd) {
-  const u = localUsers().find((x) => x.nick === name)
-  if (!u) return { ok: false, msg: '昵称不存在，请先注册' }
-  if (u.pwd !== pwd) return { ok: false, msg: '昵称或密码不正确' }
-  store.user = { name: u.nick, nick: u.nick }
-  save()
-  return { ok: true, msg: '登录成功' }
+  const nick = (name || '').trim()
+  try {
+    const r = await fetch(API + '/api/user/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: nickToEmail(nick), pwd }),
+    })
+    const res = await r.json()
+    if (res.code === 200 && res.data) {
+      store.user = { name: res.data.nick || nick, nick: res.data.nick || nick }
+      save()
+      return { ok: true, msg: '登录成功' }
+    }
+    // 后端返回的明确错误（账号不存在 / 密码错误等）
+    if (res.msg) return { ok: false, msg: res.msg }
+    return { ok: false, msg: '登录失败，请稍后再试' }
+  } catch (e) {
+    // 后端未启动 → 回退本地校验（保持离线可用）
+    const u = localUsers().find((x) => x.nick === nick)
+    if (!u) return { ok: false, msg: '昵称不存在，请先注册' }
+    if (u.pwd !== pwd) return { ok: false, msg: '昵称或密码不正确' }
+    store.user = { name: u.nick, nick: u.nick }
+    save()
+    return { ok: true, msg: '登录成功' }
+  }
 }
 
 // ---------- 地址 ----------
