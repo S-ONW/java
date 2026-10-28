@@ -214,16 +214,20 @@ function nickToEmail(nick) {
 
 /**
  * 注册：账号 = 昵称（无需邮箱）。优先写 Spring Boot 后端（POST /api/user/register），
- * 后端未启动时回退为纯本地注册。成功均写入本地账号表，
- * 保证随后必须"填对昵称和密码"才能登录。
+ * 后端会校验图形验证码（captchaToken + captcha），校验通过才入库；后端未启动时回退为纯本地注册。
+ * 成功均写入本地账号表，保证随后必须"填对昵称和密码"才能登录。
+ * @param {string} captchaToken 后端下发的验证码 token
+ * @param {string} captcha      用户输入的验证码
  * @returns {Promise<{ok:boolean, msg:string}>}
  */
-export async function submitRegister(nick, pwd) {
+export async function submitRegister(nick, pwd, captchaToken, captcha) {
+  const code = (captcha || '').trim()
+  if (!code) return { ok: false, msg: '请输入图形验证码' }
   try {
     const r = await fetch(API + '/api/user/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: nickToEmail(nick), pwd, nick }),
+      body: JSON.stringify({ email: nickToEmail(nick), pwd, nick, captchaToken, captcha: code }),
     })
     const res = await r.json()
     if (res.code === 200) {
@@ -236,12 +240,13 @@ export async function submitRegister(nick, pwd) {
     }
     return { ok: false, msg: res.msg || '注册失败，请稍后再试' }
   } catch (e) {
-    // 后端未启动 → 本地注册（同样校验重复昵称）
+    // 后端未启动 → 本地注册（仍需输入验证码，但无法校验图形，仅做非空校验）
+    if (!code) return { ok: false, msg: '请输入图形验证码' }
     if (localUsers().some((u) => u.nick === nick)) {
       return { ok: false, msg: '该昵称已注册，请直接登录' }
     }
     saveLocalUser({ nick, pwd })
-    return { ok: true, msg: '注册成功' }
+    return { ok: true, msg: '注册成功（离线模式，验证码未校验）' }
   }
 }
 

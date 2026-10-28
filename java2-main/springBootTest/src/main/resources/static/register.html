@@ -166,7 +166,7 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
         <label>图形验证码</label>
         <div class="captcha-row">
           <input id="captcha" maxlength="4" placeholder="输入右侧 4 位字符" autocomplete="off" spellcheck="false" />
-          <canvas id="cv" width="108" height="42" title="看不清？点击刷新"></canvas>
+          <img id="cv" width="108" height="42" title="看不清？点击刷新" alt="验证码" style="border:1px solid #ddd;border-radius:10px;background:#fafafb;cursor:pointer;flex-shrink:0;display:block;height:42px" />
           <button type="button" class="refresh" id="refresh" title="换一张">🔄</button>
         </div>
         <p class="tip" id="t-captcha"></p>
@@ -206,74 +206,51 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 <script>
 var $ = function (id) { return document.getElementById(id) }
 
-/* ---------- 图形验证码 ---------- */
-// 去掉易混淆字符 0/O、1/l/I
-var CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-var captchaCode = ''
+/* ---------- 图形验证码（连接后端） ---------- */
+var API = 'http://localhost:8081'
+var captchaToken = ''
 
-function genCaptcha() {
-  var cv = $('cv'), ctx = cv.getContext('2d')
-  var W = cv.width, H = cv.height
-  captchaCode = ''
-  for (var i = 0; i < 4; i++) {
-    captchaCode += CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)]
-  }
-
-  // 背景
-  ctx.clearRect(0, 0, W, H)
-  ctx.fillStyle = '#fafafb'
-  ctx.fillRect(0, 0, W, H)
-
-  // 干扰线
-  for (var l = 0; l < 4; l++) {
-    ctx.strokeStyle = 'hsl(' + Math.random() * 360 + ',60%,70%)'
-    ctx.lineWidth = 1 + Math.random()
-    ctx.beginPath()
-    ctx.moveTo(Math.random() * W, Math.random() * H)
-    ctx.bezierCurveTo(Math.random() * W, Math.random() * H, Math.random() * W, Math.random() * H, Math.random() * W, Math.random() * H)
-    ctx.stroke()
-  }
-
-  // 逐字符绘制：随机旋转 + 偏移 + 颜色
-  for (var i = 0; i < 4; i++) {
-    var ch = captchaCode[i]
-    ctx.save()
-    ctx.font = 'bold 22px -apple-system,"Segoe UI","PingFang SC",Arial,sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = 'hsl(' + Math.floor(Math.random() * 360) + ',65%,40%)'
-    var x = 15 + i * 26 + (Math.random() * 8 - 4)
-    var y = H / 2 + (Math.random() * 6 - 3)
-    ctx.translate(x, y)
-    ctx.rotate((Math.random() * 44 - 22) * Math.PI / 180)
-    ctx.fillText(ch, 0, 0)
-    ctx.restore()
-  }
-
-  // 噪点
-  for (var d = 0; d < 26; d++) {
-    ctx.fillStyle = 'rgba(' + Math.floor(Math.random() * 200) + ',' + Math.floor(Math.random() * 200) + ',' + Math.floor(Math.random() * 200) + ',.5)'
-    ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2)
-  }
-
-  $('captcha').value = ''
+// 向后端获取验证码图片 + token
+function fetchCaptcha() {
+  fetch(API + '/api/captcha')
+    .then(function (r) { if (!r.ok) throw new Error('http'); return r.json() })
+    .then(function (data) {
+      captchaToken = data.token
+      $('cv').src = data.image
+      $('captcha').value = ''
+      setTip('f-captcha', 't-captcha', '')
+    })
+    .catch(function () {
+      setTip('f-captcha', 't-captcha', '验证码加载失败，请确认后端已启动')
+    })
 }
+
+// 输入框失焦 / 提交：调后端实时校验（不消费 token，可重复校验）
 function checkCaptcha() {
-  var v = $('captcha').value.trim()
-  if (!v) return setTip('f-captcha', 't-captcha', '请输入图形验证码'), false
-  if (v.toUpperCase() !== captchaCode) {
-    setTip('f-captcha', 't-captcha', '验证码不正确，请重试')
-    genCaptcha() // 错误后自动换一张
-    return false
-  }
-  return setTip('f-captcha', 't-captcha', '验证通过 ✓', true), true
+  return new Promise(function (resolve) {
+    var v = $('captcha').value.trim()
+    if (!v) { setTip('f-captcha', 't-captcha', '请输入图形验证码'); return resolve(false) }
+    fetch(API + '/api/captcha/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: captchaToken, code: v })
+    })
+    .then(function (r) { return r.json() })
+    .then(function (data) {
+      if (data.ok) { setTip('f-captcha', 't-captcha', '验证通过 ✓', true); resolve(true) }
+      else { setTip('f-captcha', 't-captcha', '验证码不正确，请重试'); fetchCaptcha(); resolve(false) }
+    })
+    .catch(function () {
+      setTip('f-captcha', 't-captcha', '验证码校验失败，请重试'); resolve(false)
+    })
+  })
 }
 
-$('cv').addEventListener('click', genCaptcha)   // 点图片刷新
-$('refresh').addEventListener('click', genCaptcha)
+$('cv').addEventListener('click', fetchCaptcha)   // 点图片刷新
+$('refresh').addEventListener('click', fetchCaptcha)
 $('captcha').addEventListener('input', function () { setTip('f-captcha', 't-captcha', '') })
 $('captcha').addEventListener('blur', function () { if (this.value.trim()) checkCaptcha() })
-genCaptcha()
+fetchCaptcha()
 
 function setTip(field, tip, msg, ok) {
   $(field).classList.toggle('err', !!msg && !ok)
@@ -340,11 +317,14 @@ function checkPwd2() {
   })
 })
 
-$('form').addEventListener('submit', function (e) {
+$('form').addEventListener('submit', async function (e) {
   e.preventDefault()
-  var ok = [checkNick(), checkPwd(), checkPwd2(), checkCaptcha()].every(Boolean)
-  if (!$('agree').checked) { setTip('f-agree', 't-agree', '请先勾选同意用户协议'); ok = false }
-  if (!ok) return
+  var okNick = checkNick()
+  var okPwd = checkPwd()
+  var okPwd2 = checkPwd2()
+  var okCaptcha = await checkCaptcha()
+  if (!$('agree').checked) { setTip('f-agree', 't-agree', '请先勾选同意用户协议'); okCaptcha = false }
+  if (!(okNick && okPwd && okPwd2 && okCaptcha)) return
 
   var btn = $('btn')
   btn.disabled = true
@@ -358,7 +338,9 @@ $('form').addEventListener('submit', function (e) {
     body: JSON.stringify({
       email: nick.replace(/\s+/g, '') + '@shop.local',
       nick: nick,
-      pwd: $('pwd').value
+      pwd: $('pwd').value,
+      captchaToken: captchaToken,
+      captcha: $('captcha').value.trim()
     })
   })
   .then(function (r) { return r.json() })
@@ -379,18 +361,20 @@ $('form').addEventListener('submit', function (e) {
       $('card').classList.add('success')
       setTimeout(function () { window.location.replace('index.html#login') }, 1500)
     } else {
-      // 后端校验失败：昵称已注册 / 格式错误等
-      genCaptcha()
+      // 后端校验失败：昵称已注册 / 格式错误 / 验证码错误等
+      fetchCaptcha()
       btn.disabled = false
       btn.textContent = '立即注册'
-      if (res.msg.indexOf('昵称') > -1) setTip('f-nick', 't-nick', res.msg)
-      else if (res.msg.indexOf('密码') > -1) setTip('f-pwd', 't-pwd', res.msg)
-      else alert(res.msg)
+      var m = res.msg || ''
+      if (m.indexOf('昵称') > -1) setTip('f-nick', 't-nick', m)
+      else if (m.indexOf('密码') > -1) setTip('f-pwd', 't-pwd', m)
+      else if (m.indexOf('验证码') > -1) setTip('f-captcha', 't-captcha', m)
+      else alert(m || '注册失败，请稍后再试')
     }
   })
   .catch(function () {
     // 后端未启动等网络错误
-    genCaptcha()
+    fetchCaptcha()
     btn.disabled = false
     btn.textContent = '立即注册'
     alert('无法连接服务器，请先启动后端（springBootTest，端口 8081）')

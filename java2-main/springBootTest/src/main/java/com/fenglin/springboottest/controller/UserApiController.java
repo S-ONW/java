@@ -2,6 +2,7 @@ package com.fenglin.springboottest.controller;
 
 import com.fenglin.springboottest.common.Result;
 import com.fenglin.springboottest.entity.User;
+import com.fenglin.springboottest.service.CaptchaService;
 import com.fenglin.springboottest.service.UserService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,9 +22,11 @@ import java.util.Map;
 public class UserApiController {
 
     private final UserService userService;
+    private final CaptchaService captchaService;
 
-    public UserApiController(UserService userService) {
+    public UserApiController(UserService userService, CaptchaService captchaService) {
         this.userService = userService;
+        this.captchaService = captchaService;
     }
 
     @PostMapping("/register")
@@ -31,6 +34,13 @@ public class UserApiController {
         String email = body.get("email");
         String nick = body.get("nick");
         String pwd = body.get("pwd");
+        String captchaToken = body.get("captchaToken");
+        String captcha = body.get("captcha");
+
+        // 图形验证码校验（后端生成，一次性消费）
+        if (!captchaService.validate(captchaToken, captcha)) {
+            return Result.error(400, "验证码错误或已失效，请重新输入");
+        }
 
         // 参数校验
         if (email == null || email.isBlank() || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
