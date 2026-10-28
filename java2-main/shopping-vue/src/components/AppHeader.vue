@@ -9,6 +9,7 @@
       <button class="icon-btn" @click="openWish" title="收藏夹">❤️ <span class="badge">{{ store.wish.length }}</span></button>
       <button class="icon-btn" @click="go('orders')" title="我的订单">📦 <span class="badge" v-show="store.orders.length">{{ store.orders.length }}</span></button>
       <button class="icon-btn" @click="toggleTheme" title="暗色模式">{{ store.theme === 'dark' ? '☀️' : '🌙' }}</button>
+      <button class="icon-btn admin-entry" @click="onAdmin" title="后台管理系统">⚙️ 后台管理</button>
       <button class="icon-btn" @click="openCart" title="购物车">🛒 <span class="badge">{{ cartCount }}</span></button>
       <div v-if="store.user" class="avatar" @click="openAccount" title="账户">{{ store.user.name[0].toUpperCase() }}</div>
       <div v-else class="auth-wrap" ref="authWrap">
@@ -42,6 +43,9 @@ function toggleAuthMenu() { showAuthMenu.value = !showAuthMenu.value }
 function goLogin() { showAuthMenu.value = false; openLoginPage() }
 function goRegister() { showAuthMenu.value = false; openRegisterPage() }
 
+// 后台管理系统入口：已登录直接进管理页，未登录先到后台登录页（后台不提供注册）
+function onAdmin() { go(store.admin ? 'admin' : 'adminLogin') }
+
 // 点击下拉以外的区域时收起菜单
 function onDocClick(e) {
   if (showAuthMenu.value && authWrap.value && !authWrap.value.contains(e.target)) {
@@ -54,6 +58,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 <style scoped>
 .auth-wrap { position: relative; display: flex; }
+.admin-entry {
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  color: var(--primary);
+  font-weight: 600;
+}
+.admin-entry:hover { border-color: var(--primary); background: var(--bg); }
 .auth-trigger { white-space: nowrap; }
 .auth-menu {
   position: absolute;

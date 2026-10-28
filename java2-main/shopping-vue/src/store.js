@@ -21,6 +21,13 @@ export const store = reactive({
   perPage: 8,
   filters: { min: null, max: null, rate: 0 },
 
+  // 商品数据：默认取 data.js 的静态数据，后台管理系统可对它增删改
+  // （后端可用时以后端 product 表为准，离线时改动保存在浏览器本地）
+  products: LS.get('shopProducts', null) || PRODUCTS.map((p) => ({ ...p, g: [...(p.g || [])] })),
+
+  // 后台管理员登录态：{ username, nick, token, offline }
+  admin: LS.get('shopAdmin', null),
+
   cart: LS.get('shopCart', {}),
   wish: LS.get('shopWish', []),
   orders: LS.get('shopOrders', []),
@@ -51,7 +58,8 @@ export const store = reactive({
 })
 
 // ---------- 纯函数 / 派生数据 ----------
-export const pById = (id) => PRODUCTS.find((p) => p.id == id)
+// 商品以 store.products 为准：后台管理系统改的数据会实时反映到首页 / 详情 / 购物车
+export const pById = (id) => store.products.find((p) => p.id == id)
 export const money = (n) => '¥' + n
 export const stars = (r) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r))
 
@@ -81,6 +89,8 @@ function save() {
   LS.set('shopAddr', store.addresses)
   LS.set('shopUser', store.user)
   LS.set('shopSelAddr', store.selAddr)
+  LS.set('shopProducts', store.products)
+  LS.set('shopAdmin', store.admin)
 }
 
 // ---------- Toast ----------
@@ -122,6 +132,7 @@ export function setPage(p) { store.page = p }
 // ---------- 商品 / 收藏 ----------
 export function addToCart(id, q = 1) {
   const p = pById(id)
+  if (!p) { toast('商品已下架'); return }   // 后台删除商品后购物车残留的兜底
   const have = store.cart[id] || 0
   if (have + q > p.stock) { toast('超出库存啦'); return }
   store.cart[id] = have + q
@@ -161,6 +172,7 @@ export function closeDrawer() { store.drawer = '' }
 
 export function cartInc(id) {
   const p = pById(id)
+  if (!p) return                                                  // 商品已被后台删除
   if ((store.cart[id] || 0) + 1 > p.stock) { toast('超出库存'); return }
   store.cart[id]++
   save()
@@ -375,4 +387,137 @@ export function subscribe(email) {
   if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('订阅成功 📧'); return true }
   toast('请输入有效邮箱')
   return false
+}
+
+// ---------- 后台管理系统 ----------
+// 后台负责对首页展示的购物数据（商品）做增删改查。
+// 后端可用 → 数据存 MySQL（product 表），并同步回首页；后端不可用 → 退化为浏览器本地数据，
+// 后台页面顶部会提示「离线模式」，保证功能任何情况下都能演示。
+
+/** 拉取后端商品列表，覆盖本地数据（后台改动 → 首页立即生效） */
+export async function loadProducts() {
+  try {
+    const r = await fetch(API + '/api/product/list')
+    const res = await r.json()
+    if (res.code === 200 && Array.isArray(res.data) && res.data.length) {
+      store.products = res.data
+      save()
+      return { ok: true, msg: '已同步后端商品数据' }
+    }
+    return { ok: false, msg: res.msg || '后端暂无商品数据' }
+  } catch (e) {
+    return { ok: false, msg: '未连接后端，当前使用本地数据' }
+  }
+}
+
+/**
+ * 管理员登录。后台只提供登录、不开放注册；账号在后端 application-dev.properties 配置
+ * （默认 admin / admin123）。后端未启动时允许用同一默认账号进入离线模式。
+ */
+export async function adminLogin(username, pwd) {
+  const u = (username || '').trim()
+  if (!u || !pwd) return { ok: false, msg: '请输入账号和密码' }
+  try {
+    const r = await fetch(API + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, pwd }),
+    })
+    const res = await r.json()
+    if (res.code === 200 && res.data) {
+      store.admin = {
+        username: res.data.username || u,
+        nick: res.data.nick || '管理员',
+        token: res.data.token,
+        offline: false,
+      }
+      save()
+      await loadProducts()
+      return { ok: true, msg: '登录成功' }
+    }
+    return { ok: false, msg: res.msg || '账号或密码不正确' }
+  } catch (e) {
+    // 后端未启动 → 离线模式（默认账号）
+    if (u === 'admin' && pwd === 'admin123') {
+      store.admin = { username: u, nick: '管理员', token: 'offline', offline: true }
+      save()
+      return { ok: true, msg: '离线模式登录成功（数据仅存本地）' }
+    }
+    return { ok: false, msg: '无法连接后端，离线模式请用 admin / admin123' }
+  }
+}
+
+/** 退出后台登录 */
+export function adminLogout() {
+  const token = store.admin && store.admin.token
+  if (token && token !== 'offline') {
+    fetch(API + '/api/admin/logout', {
+      method: 'POST',
+      headers: { 'X-Admin-Token': token },
+    }).catch(() => { /* 后端不可用则忽略 */ })
+  }
+  store.admin = null
+  save()
+}
+
+/** 新增或修改商品（有 id 视为修改） */
+export async function adminSaveProduct(p) {
+  const body = {
+    id: p.id == null ? null : p.id,
+    name: (p.name || '').trim(),
+    desc: p.desc || '',
+    price: +p.price || 0,
+    old: +p.old || 0,
+    cat: p.cat || '其他',
+    icon: p.icon || '📦',
+    hot: +p.hot || 50,
+    rate: +p.rate || 4.5,
+    stock: +p.stock || 0,
+    tag: p.tag || '',
+    g: Array.isArray(p.g) ? p.g.filter(Boolean) : [],
+  }
+  if (!body.name) return { ok: false, msg: '商品名称不能为空' }
+  try {
+    const r = await fetch(API + '/api/product/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': (store.admin && store.admin.token) || '',
+      },
+      body: JSON.stringify(body),
+    })
+    const res = await r.json()
+    if (res.code === 200) {
+      await loadProducts()
+      return { ok: true, msg: '已保存到数据库' }
+    }
+    return { ok: false, msg: res.msg || '保存失败' }
+  } catch (e) {
+    // 离线：改本地数据，首页同样实时生效
+    const i = store.products.findIndex((x) => x.id == body.id)
+    if (i > -1) store.products[i] = { ...store.products[i], ...body }
+    else store.products.push({ ...body, id: Date.now() })
+    save()
+    return { ok: true, msg: '离线模式：已保存到本地' }
+  }
+}
+
+/** 删除商品 */
+export async function adminDeleteProduct(id) {
+  try {
+    const r = await fetch(API + '/api/product/' + id, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Token': (store.admin && store.admin.token) || '' },
+    })
+    const res = await r.json()
+    if (res.code === 200) {
+      await loadProducts()
+      return { ok: true, msg: '已删除' }
+    }
+    return { ok: false, msg: res.msg || '删除失败' }
+  } catch (e) {
+    store.products = store.products.filter((p) => p.id != id)
+    save()
+    return { ok: true, msg: '离线模式：已在本地删除' }
+  }
 }

@@ -97,10 +97,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, setCat, setRate, setPage, applyFilter } from '../store.js'
-import { PRODUCTS, BANNERS } from '../data.js'
+import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
-const cats = ['all', ...new Set(PRODUCTS.map((p) => p.cat))]
+// 分类取自 store.products（后台新增商品/分类后，首页自动出现），不再写死静态数据
+const cats = computed(() => ['all', ...new Set(store.products.map((p) => p.cat))])
 const current = ref(0)
 const minP = ref(null)
 const maxP = ref(null)
@@ -112,7 +113,7 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer))
 
 const filtered = computed(() =>
-  PRODUCTS.filter((p) => {
+  store.products.filter((p) => {
     const okCat = store.cat === 'all' || p.cat === store.cat
     const okKw =
       !store.keyword ||

@@ -60,7 +60,7 @@ import { computed } from 'vue'
 import {
   store, pById, stars, money, setDetailImg, changeDetailQty, addDetailToCart, closeModal,
 } from '../store.js'
-import { PRODUCTS, REVIEW_POOL } from '../data.js'
+import { REVIEW_POOL } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
 const p = computed(() => (store.detailId != null ? pById(store.detailId) : null))
@@ -76,6 +76,6 @@ const revs = computed(() => {
   })
 })
 const related = computed(() =>
-  p.value ? PRODUCTS.filter((x) => x.cat === p.value.cat && x.id !== p.value.id).slice(0, 4) : []
+  p.value ? store.products.filter((x) => x.cat === p.value.cat && x.id !== p.value.id).slice(0, 4) : []
 )
 </script>
