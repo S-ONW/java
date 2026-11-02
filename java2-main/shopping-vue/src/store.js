@@ -521,3 +521,29 @@ export async function adminDeleteProduct(id) {
     return { ok: true, msg: '离线模式：已在本地删除' }
   }
 }
+
+/** 批量删除商品：ids 为数组 */
+export async function adminDeleteProducts(ids) {
+  if (!Array.isArray(ids) || !ids.length) return { ok: false, msg: '请选择要删除的商品' }
+  try {
+    const r = await fetch(API + '/api/product/batch', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': (store.admin && store.admin.token) || '',
+      },
+      body: JSON.stringify({ ids }),
+    })
+    const res = await r.json()
+    if (res.code === 200) {
+      await loadProducts()
+      return { ok: true, msg: res.msg || '已批量删除' }
+    }
+    return { ok: false, msg: res.msg || '批量删除失败' }
+  } catch (e) {
+    const set = new Set(ids.map(String))
+    store.products = store.products.filter((p) => !set.has(String(p.id)))
+    save()
+    return { ok: true, msg: '离线模式：已在本地删除' }
+  }
+}

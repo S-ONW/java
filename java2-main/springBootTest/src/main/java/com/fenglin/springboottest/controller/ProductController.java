@@ -23,7 +23,8 @@ import java.util.Map;
  *
  * GET    /api/product/list          商品列表（公开，首页/后台都读它）
  * POST   /api/product/save          新增或保存商品（需 Header: X-Admin-Token）
- * DELETE /api/product/{id}          删除商品（需 Header: X-Admin-Token）
+ * DELETE /api/product/{id}          删除单个商品（需 Header: X-Admin-Token）
+ * DELETE /api/product/batch         批量删除商品（body: {ids:[...]}，需 X-Admin-Token）
  *
  * 前端商品字段（与 data.js 一致）：
  * { id, name, desc, price, old, cat, icon, hot, rate, stock, tag, g[] }
@@ -84,6 +85,12 @@ public class ProductController {
         p.setTag(str(body.get("tag")));
         p.setGallery(joinGallery(body.get("g")));
 
+        // 编辑 / 新增通用校验：避免非法数值写进数据库
+        if (p.getPrice() < 0) return Result.error(400, "售价不能为负数");
+        if (p.getOldPrice() < 0) return Result.error(400, "原价不能为负数");
+        if (p.getStock() < 0) return Result.error(400, "库存不能为负数");
+        if (p.getRate() < 0 || p.getRate() > 5) return Result.error(400, "评分需在 0~5 之间");
+
         try {
             if (p.getId() == null) {
                 productMapper.insert(p);
@@ -113,6 +120,38 @@ public class ProductController {
             return Result.ok("删除成功");
         } catch (Exception e) {
             return Result.error(500, "删除商品失败，请确认 product 表已创建");
+        }
+    }
+
+    /** 批量删除商品：body 传 { ids: [1,2,3] }，忽略不存在 / 非法 id */
+    @DeleteMapping("/batch")
+    public Result<String> deleteBatch(
+            @RequestHeader(value = "X-Admin-Token", required = false) String token,
+            @RequestBody Map<String, Object> body) {
+        if (!adminService.check(token)) {
+            return Result.error(401, "登录已失效，请重新登录后台");
+        }
+        Object idsObj = body.get("ids");
+        if (!(idsObj instanceof List)) {
+            return Result.error(400, "请选择要删除的商品");
+        }
+        List<Long> ids = new ArrayList<>();
+        for (Object o : (List<?>) idsObj) {
+            if (o == null) continue;
+            try {
+                ids.add(Long.valueOf(o.toString().trim()));
+            } catch (Exception ignored) {
+                // 跳过非法 id，继续处理其余
+            }
+        }
+        if (ids.isEmpty()) {
+            return Result.error(400, "请选择要删除的商品");
+        }
+        try {
+            int n = productMapper.deleteBatchIds(ids);
+            return Result.ok("已成功删除 " + n + " 个商品");
+        } catch (Exception e) {
+            return Result.error(500, "批量删除失败，请确认 product 表已创建");
         }
     }
 

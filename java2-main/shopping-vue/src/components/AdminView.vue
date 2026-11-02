@@ -38,11 +38,19 @@
         <button class="btn" @click="refresh">🔄 刷新数据</button>
       </section>
 
+      <!-- 批量操作栏（选中商品后出现） -->
+      <section class="batchbar" v-if="selectedCount">
+        <span class="info">已选 <b>{{ selectedCount }}</b> 项</span>
+        <button class="btn sm danger" @click="batchRemove">批量删除</button>
+        <button class="btn sm" @click="clearSel">取消选择</button>
+      </section>
+
       <!-- 商品表格 -->
       <section class="panel">
         <table>
           <thead>
             <tr>
+              <th class="c"><input type="checkbox" :checked="allChecked" @change="toggleAll" title="全选" /></th>
               <th>图标</th><th>ID</th><th>商品名称</th><th>分类</th>
               <th>售价</th><th>原价</th><th>库存</th><th>热度</th><th>评分</th>
               <th>角标</th><th class="right">操作</th>
@@ -50,6 +58,7 @@
           </thead>
           <tbody>
             <tr v-for="p in list" :key="p.id">
+              <td class="c"><input type="checkbox" :checked="selectedIds.includes(p.id)" @change="toggleSel(p.id)" /></td>
               <td class="icon">{{ p.icon }}</td>
               <td class="muted">{{ p.id }}</td>
               <td class="name">
@@ -64,12 +73,12 @@
               <td>{{ p.rate }}</td>
               <td><span class="badge" v-if="p.tag">{{ p.tag }}</span><span v-else class="muted">—</span></td>
               <td class="right ops">
-                <button class="btn sm" @click="openForm(p)">编辑</button>
+                <button class="btn sm" @click="askEdit(p)">编辑</button>
                 <button class="btn sm danger" @click="remove(p)">删除</button>
               </td>
             </tr>
             <tr v-if="!list.length">
-              <td colspan="11" class="empty">暂无商品数据，点击「新增商品」添加</td>
+              <td colspan="12" class="empty">暂无商品数据，点击「新增商品」添加</td>
             </tr>
           </tbody>
         </table>
@@ -79,18 +88,33 @@
     <!-- 新增 / 编辑弹窗 -->
     <div class="mask" v-if="showForm" @click.self="showForm = false">
       <div class="modal">
-        <h3>{{ editing ? '编辑商品' : '新增商品' }}</h3>
+        <h3>{{ editing ? '编辑商品 · #' + editing.id : '新增商品' }}</h3>
+
+        <!-- 实时预览：编辑时直观看到商品卡片效果 -->
+        <div class="pv" v-if="draft.name || draft.icon">
+          <div class="pv-ic">{{ draft.icon || '📦' }}</div>
+          <div class="pv-bd">
+            <div class="pv-name">{{ draft.name || '未命名商品' }}</div>
+            <div class="pv-line">
+              <span class="pv-price">¥{{ numOr(draft.price) }}</span>
+              <span class="pv-rate">★ {{ numOr(draft.rate) }}</span>
+              <span class="pv-tag" v-if="draft.tag">{{ draft.tag }}</span>
+            </div>
+            <div class="pv-sub">分类 {{ draft.cat || '其他' }} · 库存 {{ numOr(draft.stock) }} · 热度 {{ numOr(draft.hot) }}</div>
+          </div>
+        </div>
+
         <div class="grid">
-          <label class="f"><span>商品名称 *</span><input v-model="draft.name" placeholder="如：无线降噪耳机" /></label>
+          <label class="f" :class="{ err: errors.name }"><span>商品名称 *</span><input v-model="draft.name" placeholder="如：无线降噪耳机" /><em v-if="errors.name">{{ errors.name }}</em></label>
           <label class="f"><span>分类</span><input v-model="draft.cat" list="cat-list" placeholder="数码 / 家居 / 美妆…" /></label>
           <label class="f"><span>图标 emoji</span><input v-model="draft.icon" placeholder="🎧" /></label>
           <label class="f"><span>角标</span><input v-model="draft.tag" placeholder="热销 / 新品 / 折扣（可空）" /></label>
           <label class="f wide"><span>商品描述</span><input v-model="draft.desc" placeholder="一句话卖点" /></label>
-          <label class="f"><span>售价（元）</span><input v-model="draft.price" type="number" min="0" /></label>
-          <label class="f"><span>原价（元）</span><input v-model="draft.old" type="number" min="0" /></label>
-          <label class="f"><span>库存</span><input v-model="draft.stock" type="number" min="0" /></label>
-          <label class="f"><span>热度</span><input v-model="draft.hot" type="number" min="0" /></label>
-          <label class="f"><span>评分</span><input v-model="draft.rate" type="number" step="0.1" min="0" max="5" /></label>
+          <label class="f" :class="{ err: errors.price }"><span>售价（元）*</span><input v-model="draft.price" type="number" min="0" /><em v-if="errors.price">{{ errors.price }}</em></label>
+          <label class="f" :class="{ err: errors.old }"><span>原价（元）</span><input v-model="draft.old" type="number" min="0" /><em v-if="errors.old">{{ errors.old }}</em></label>
+          <label class="f" :class="{ err: errors.stock }"><span>库存 *</span><input v-model="draft.stock" type="number" min="0" step="1" /><em v-if="errors.stock">{{ errors.stock }}</em></label>
+          <label class="f" :class="{ err: errors.hot }"><span>热度</span><input v-model="draft.hot" type="number" min="0" step="1" /><em v-if="errors.hot">{{ errors.hot }}</em></label>
+          <label class="f" :class="{ err: errors.rate }"><span>评分（0~5）</span><input v-model="draft.rate" type="number" step="0.1" min="0" max="5" /><em v-if="errors.rate">{{ errors.rate }}</em></label>
           <label class="f wide"><span>图集 emoji（空格或逗号分隔）</span><input v-model="gText" placeholder="🎧 🔇 🔋" /></label>
         </div>
         <datalist id="cat-list">
@@ -100,7 +124,26 @@
         <p class="err" v-if="formErr">{{ formErr }}</p>
         <div class="modal-ops">
           <button class="btn" @click="showForm = false">取消</button>
-          <button class="btn primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+          <button class="btn primary" :disabled="saving || !isValid" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑确认提示框：点击编辑按钮时先弹出，确认后才打开编辑表单 -->
+    <div class="mask" v-if="confirmEdit" @click.self="confirmEdit = null">
+      <div class="modal confirm">
+        <h3>✏️ 确认编辑商品</h3>
+        <div class="cv" v-if="confirmEdit">
+          <div class="cv-ic">{{ confirmEdit.icon }}</div>
+          <div class="cv-bd">
+            <div class="cv-name">{{ confirmEdit.name }} <span class="cv-id">#{{ confirmEdit.id }}</span></div>
+            <div class="cv-sub">分类 {{ confirmEdit.cat || '其他' }} · 售价 ¥{{ confirmEdit.price }} · 库存 {{ confirmEdit.stock }}</div>
+          </div>
+        </div>
+        <p class="confirm-tip">你即将修改该商品的信息，确认进入编辑界面？修改后需点击「保存」才会生效。</p>
+        <div class="modal-ops">
+          <button class="btn" @click="confirmEdit = null">取消</button>
+          <button class="btn primary" @click="proceedEdit">确认编辑</button>
         </div>
       </div>
     </div>
@@ -110,13 +153,36 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
-  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminLogout, go, toast,
+  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, go, toast,
 } from '../store.js'
 
 const kw = ref('')
 const cat = ref('')
 const showForm = ref(false)
 const editing = ref(null)
+
+// 批量选择：记录当前勾选的商品 id
+const selectedIds = ref([])
+const selectedCount = computed(() => selectedIds.value.length)
+const allChecked = computed(
+  () => list.value.length > 0 && list.value.every((p) => selectedIds.value.includes(p.id))
+)
+function toggleSel(id) {
+  const i = selectedIds.value.indexOf(id)
+  if (i > -1) selectedIds.value.splice(i, 1)
+  else selectedIds.value.push(id)
+}
+function toggleAll(e) {
+  selectedIds.value = e.target.checked ? list.value.map((p) => p.id) : []
+}
+function clearSel() { selectedIds.value = [] }
+async function batchRemove() {
+  if (!selectedIds.value.length) return
+  if (!window.confirm(`确定删除选中的 ${selectedIds.value.length} 个商品？删除后将同时从商城首页移除。`)) return
+  const res = await adminDeleteProducts(selectedIds.value.slice())
+  toast(res.msg)
+  if (res.ok) clearSel()
+}
 const saving = ref(false)
 const formErr = ref('')
 const gText = ref('')
@@ -128,6 +194,26 @@ function blank() {
   }
 }
 const draft = reactive(blank())
+
+// 字段级校验（新增/编辑共用）：返回每个字段的错误文案
+const errors = computed(() => {
+  const e = {}
+  if (!draft.name.trim()) e.name = '商品名称不能为空'
+  const num = (v) => v !== '' && v != null && !isNaN(+v)
+  if (!num(draft.price) || +draft.price < 0) e.price = '售价需为不小于 0 的数字'
+  if (!num(draft.old) || +draft.old < 0) e.old = '原价需为不小于 0 的数字'
+  if (!num(draft.stock) || !Number.isInteger(+draft.stock) || +draft.stock < 0) e.stock = '库存需为不小于 0 的整数'
+  if (!num(draft.hot) || !Number.isInteger(+draft.hot) || +draft.hot < 0) e.hot = '热度需为不小于 0 的整数'
+  if (!num(draft.rate) || +draft.rate < 0 || +draft.rate > 5) e.rate = '评分需为 0~5 的数字'
+  return e
+})
+const isValid = computed(() => Object.keys(errors.value).length === 0)
+
+// 预览卡片用：把空/非法数字显示为 —
+function numOr(v) {
+  const n = parseFloat(v)
+  return isNaN(n) ? '—' : n
+}
 
 // 分类列表：来自当前商品数据，新增分类后自动出现
 const catList = computed(() => [...new Set(store.products.map((p) => p.cat))])
@@ -156,8 +242,19 @@ function openForm(p) {
   showForm.value = true
 }
 
+// 编辑确认提示框：点击「编辑」先弹确认，确认后才真正打开编辑表单
+const confirmEdit = ref(null)
+function askEdit(p) {
+  confirmEdit.value = p
+}
+function proceedEdit() {
+  const p = confirmEdit.value
+  confirmEdit.value = null
+  openForm(p)
+}
+
 async function save() {
-  if (!draft.name.trim()) { formErr.value = '商品名称不能为空'; return }
+  if (!isValid.value) { formErr.value = '请先修正表单中标红的项'; return }
   saving.value = true
   const payload = {
     ...draft,
@@ -265,6 +362,18 @@ td.right, th.right { text-align: right; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 .ops { display: flex; gap: 6px; justify-content: flex-end; }
 
+/* 勾选列 */
+th.c, td.c { width: 40px; text-align: center; padding-left: 6px; padding-right: 6px; }
+th.c input, td.c input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+
+/* 批量操作栏 */
+.batchbar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 10px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; flex-wrap: wrap;
+}
+.batchbar .info { font-size: 14px; color: var(--text); }
+.batchbar .info b { color: var(--primary); }
+
 /* 按钮 */
 .btn {
   border: 1px solid var(--line); background: var(--card); color: var(--text);
@@ -289,6 +398,7 @@ td.right, th.right { text-align: right; }
   width: 100%; max-width: 560px; max-height: 88vh; overflow: auto;
 }
 .modal h3 { font-size: 18px; }
+.modal.confirm { max-width: 420px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
 .f { display: flex; flex-direction: column; gap: 6px; }
 .f.wide { grid-column: 1 / -1; }
@@ -300,6 +410,49 @@ td.right, th.right { text-align: right; }
 .f input:focus { border-color: var(--primary); }
 .modal-ops { display: flex; justify-content: flex-end; gap: 10px; }
 .err { color: var(--primary); font-size: 13px; margin-bottom: 8px; }
+
+/* 编辑确认提示框 */
+.cv {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; margin: 14px 0;
+}
+.cv-ic {
+  font-size: 28px; width: 44px; height: 44px; line-height: 44px; text-align: center;
+  background: var(--card); border-radius: 10px; flex: none;
+}
+.cv-bd { flex: 1; min-width: 0; }
+.cv-name { font-size: 15px; font-weight: 600; }
+.cv-id { font-size: 12px; color: var(--muted); font-weight: 400; }
+.cv-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.confirm-tip { font-size: 13px; color: var(--muted); margin: 0 0 16px; line-height: 1.6; }
+
+/* 实时预览卡片 */
+.pv {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 16px;
+}
+.pv-ic {
+  font-size: 30px; width: 46px; height: 46px; line-height: 46px; text-align: center;
+  background: var(--card); border-radius: 10px; flex: none;
+}
+.pv-bd { flex: 1; min-width: 0; }
+.pv-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.pv-line { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.pv-price { color: var(--primary); font-weight: 700; }
+.pv-rate { color: var(--muted); }
+.pv-tag {
+  font-size: 11px; padding: 1px 7px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--line); color: var(--muted);
+}
+.pv-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* 字段级错误：标红输入框 + 行内提示 */
+.f.err input { border-color: var(--primary); }
+.f em {
+  font-style: normal; font-size: 12px; color: var(--primary); margin-top: 4px;
+}
 
 @media (max-width: 860px) {
   .stats { grid-template-columns: 1fr 1fr; }
