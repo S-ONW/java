@@ -1,7 +1,7 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : test
+ Source Server         : localhost_3306
  Source Server Type    : MySQL
  Source Server Version : 80039 (8.0.39)
  Source Host           : localhost:3306
@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 28/10/2026 09:51:37
+ Date: 02/11/2026 11:59:03
 */
 
 SET NAMES utf8mb4;
@@ -35,7 +35,7 @@ CREATE TABLE `product`  (
   `tag` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '角标：热销/新品/折扣',
   `gallery` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '图集 emoji，英文逗号分隔',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of product
@@ -71,7 +71,7 @@ CREATE TABLE `user`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
@@ -80,5 +80,6 @@ INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', 'e10adc3949ba59abbe
 INSERT INTO `user` VALUES (3, 'rr@shop.local', 'rr', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-26 11:46:34');
 INSERT INTO `user` VALUES (4, 'dd@shop.local', 'dd', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-26 11:47:15');
 INSERT INTO `user` VALUES (5, 'cc@shop.local', 'cc', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-28 09:03:40');
+INSERT INTO `user` VALUES (6, 'ww@shop.local', 'ww', 'e10adc3949ba59abbe56e057f20f883e', '2026-11-02 11:32:06');
 
 SET FOREIGN_KEY_CHECKS = 1;
