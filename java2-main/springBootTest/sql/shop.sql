@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 02/11/2026 11:59:03
+ Date: 04/11/2026 09:58:33
 */
 
 SET NAMES utf8mb4;
@@ -35,12 +35,12 @@ CREATE TABLE `product`  (
   `tag` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '角标：热销/新品/折扣',
   `gallery` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '图集 emoji，英文逗号分隔',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of product
 -- ----------------------------
-INSERT INTO `product` VALUES (1, '无线降噪耳机', '主动降噪 · 30h 续航 · 通透模式', 399, 599, '数码', '🎧', 98, 4.8, 32, '热销', '🎧,🔇,🔋');
+INSERT INTO `product` VALUES (1, '无线降噪耳机', '主动降噪 · 30h 续航 · 通透模式', 398, 599, '数码', '🎧', 98, 4.8, 32, '热销', '🎧,🔇,🔋');
 INSERT INTO `product` VALUES (2, '机械键盘', 'RGB 背光 · 红轴手感 · 全键无冲', 259, 349, '数码', '⌨️', 85, 4.6, 18, '折扣', '⌨️,💡,🖱️');
 INSERT INTO `product` VALUES (3, '智能手表', '心率血氧 · 运动追踪 · 防水', 699, 899, '数码', '⌚', 90, 4.7, 9, '新品', '⌚,❤️,🏃');
 INSERT INTO `product` VALUES (4, '便携充电宝', '20000mAh · 22.5W 快充', 129, 199, '数码', '🔋', 76, 4.5, 50, '', '🔋,⚡,🔌');

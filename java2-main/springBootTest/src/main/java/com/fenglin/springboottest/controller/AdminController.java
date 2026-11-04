@@ -53,4 +53,14 @@ public class AdminController {
         adminService.logout(token);
         return Result.ok("已退出登录");
     }
+
+    /**
+     * 校验后台登录态是否仍然有效：后端 token 为内存态，服务重启或过期（4h）后失效。
+     * 前端进入后台管理页 / 写操作前用它复核，失效则引导重新登录获取新 token。
+     */
+    @PostMapping("/check")
+    public Result<Void> check(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
+        if (adminService.check(token)) return Result.ok("ok");
+        return Result.error(401, "登录已失效，请重新登录后台");
+    }
 }

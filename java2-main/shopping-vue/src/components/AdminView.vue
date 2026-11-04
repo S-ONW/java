@@ -153,7 +153,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
-  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, go, toast,
+  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, adminCheck, go, toast,
 } from '../store.js'
 
 const kw = ref('')
@@ -289,9 +289,14 @@ function logout() {
 }
 function back() { go('home') }
 
-// 未登录时（如刷新页面后登录态丢失）回到登录页
-onMounted(() => {
-  if (!store.admin) go('adminLogin')
+// 进入后台页时复核登录态：后端 token 为内存态，重启/过期后 localStorage 里仍是旧 token，
+// 若不复核就会“显示已登录却无法增删改”。校验失败则清空并跳回登录页重新获取 token。
+onMounted(async () => {
+  if (!store.admin) { go('adminLogin'); return }
+  if (!store.admin.offline) {
+    const valid = await adminCheck()
+    if (!valid) { adminLogout(); go('adminLogin'); return }
+  }
 })
 </script>
 
@@ -394,6 +399,9 @@ th.c input, td.c input { width: 16px; height: 16px; cursor: pointer; accent-colo
   display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
 }
 .modal {
+  /* 必须显式声明 display，否则会被全局 style.css 的 .modal{display:none}（商城前台弹窗规则）命中，
+     导致后台「新增/编辑」弹窗渲染出来却永远不可见 —— 表现为点击编辑按钮无反应 */
+  display: block;
   background: var(--card); border-radius: 16px; padding: 24px;
   width: 100%; max-width: 560px; max-height: 88vh; overflow: auto;
 }

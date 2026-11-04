@@ -410,6 +410,58 @@ export async function loadProducts() {
   }
 }
 
+// 本次会话的管理员凭据，仅存 sessionStorage（标签页关闭即清除，不长期落盘）。
+// 用途：后端 token 是内存态，服务/devtools 热重启或过期后会自动失效；
+// 此时用它静默重新登录换取新 token，避免用户编辑到一半被踢回登录页、丢失表单。
+let adminCreds = null
+try { adminCreds = JSON.parse(sessionStorage.getItem('shopAdminCreds') || 'null') } catch (e) { adminCreds = null }
+
+/** 用记住的凭据静默重新登录，成功返回新 token，失败返回 null */
+async function adminRelogin() {
+  if (!adminCreds || !adminCreds.username || !adminCreds.pwd) return null
+  try {
+    const r = await fetch(API + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adminCreds),
+    })
+    const res = await r.json()
+    if (res.code === 200 && res.data && res.data.token) {
+      store.admin = {
+        username: res.data.username || adminCreds.username,
+        nick: res.data.nick || '管理员',
+        token: res.data.token,
+        offline: false,
+      }
+      save()
+      return res.data.token
+    }
+  } catch (e) { /* 后端不可用，交给上层跳登录页 */ }
+  return null
+}
+
+/**
+ * 统一的后台写请求：自动携带当前 token；
+ * 若后端返回 401（token 因重启/过期失效），静默重新登录后用新 token 重试一次。
+ * 后端不可用（fetch 抛错）时把异常抛给调用方，由调用方走离线本地逻辑。
+ */
+async function adminWrite(path, options = {}) {
+  const send = (token) => fetch(API + path, {
+    ...options,
+    headers: { ...(options.headers || {}), 'X-Admin-Token': token || '' },
+  })
+  let r = await send((store.admin && store.admin.token) || '')
+  let res = await r.json()
+  if (res.code === 401) {
+    const fresh = await adminRelogin()
+    if (fresh) {
+      r = await send(fresh)
+      res = await r.json()
+    }
+  }
+  return res
+}
+
 /**
  * 管理员登录。后台只提供登录、不开放注册；账号在后端 application-dev.properties 配置
  * （默认 admin / admin123）。后端未启动时允许用同一默认账号进入离线模式。
@@ -431,6 +483,9 @@ export async function adminLogin(username, pwd) {
         token: res.data.token,
         offline: false,
       }
+      // 记住凭据，供 token 失效时静默重新登录（仅 sessionStorage，标签页关闭即失效）
+      adminCreds = { username: u, pwd }
+      try { sessionStorage.setItem('shopAdminCreds', JSON.stringify(adminCreds)) } catch (e) { /* ignore */ }
       save()
       await loadProducts()
       return { ok: true, msg: '登录成功' }
@@ -440,11 +495,37 @@ export async function adminLogin(username, pwd) {
     // 后端未启动 → 离线模式（默认账号）
     if (u === 'admin' && pwd === 'admin123') {
       store.admin = { username: u, nick: '管理员', token: 'offline', offline: true }
+      adminCreds = null
       save()
       return { ok: true, msg: '离线模式登录成功（数据仅存本地）' }
     }
     return { ok: false, msg: '无法连接后端，离线模式请用 admin / admin123' }
   }
+}
+
+/** 校验当前后台登录态是否仍然有效（后端 token 为内存态，重启/过期即失效） */
+export async function adminCheck() {
+  if (!store.admin || !store.admin.token) return false
+  if (store.admin.offline) return true // 离线模式无需校验
+  try {
+    const r = await fetch(API + '/api/admin/check', {
+      method: 'POST',
+      headers: { 'X-Admin-Token': store.admin.token },
+    })
+    const res = await r.json()
+    // 401：先尝试静默重新登录换取新 token，成功则登录态继续有效
+    if (res.code === 401) return (await adminRelogin()) !== null
+    // 404（后端尚未部署校验端点）等情况保守视为有效，避免误踢登录态
+    return true
+  } catch (e) {
+    return true
+  }
+}
+
+/** 后台登录态失效且自动重登失败：清空并跳回登录页，让用户重新登录 */
+function adminSessionExpired() {
+  adminLogout()
+  go('adminLogin')
 }
 
 /** 退出后台登录 */
@@ -456,6 +537,8 @@ export function adminLogout() {
       headers: { 'X-Admin-Token': token },
     }).catch(() => { /* 后端不可用则忽略 */ })
   }
+  adminCreds = null
+  try { sessionStorage.removeItem('shopAdminCreds') } catch (e) { /* ignore */ }
   store.admin = null
   save()
 }
@@ -478,19 +561,16 @@ export async function adminSaveProduct(p) {
   }
   if (!body.name) return { ok: false, msg: '商品名称不能为空' }
   try {
-    const r = await fetch(API + '/api/product/save', {
+    const res = await adminWrite('/api/product/save', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Token': (store.admin && store.admin.token) || '',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    const res = await r.json()
     if (res.code === 200) {
       await loadProducts()
       return { ok: true, msg: '已保存到数据库' }
     }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效，请重新登录后台' } }
     return { ok: false, msg: res.msg || '保存失败' }
   } catch (e) {
     // 离线：改本地数据，首页同样实时生效
@@ -505,15 +585,12 @@ export async function adminSaveProduct(p) {
 /** 删除商品 */
 export async function adminDeleteProduct(id) {
   try {
-    const r = await fetch(API + '/api/product/' + id, {
-      method: 'DELETE',
-      headers: { 'X-Admin-Token': (store.admin && store.admin.token) || '' },
-    })
-    const res = await r.json()
+    const res = await adminWrite('/api/product/' + id, { method: 'DELETE' })
     if (res.code === 200) {
       await loadProducts()
       return { ok: true, msg: '已删除' }
     }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效，请重新登录后台' } }
     return { ok: false, msg: res.msg || '删除失败' }
   } catch (e) {
     store.products = store.products.filter((p) => p.id != id)
@@ -526,19 +603,16 @@ export async function adminDeleteProduct(id) {
 export async function adminDeleteProducts(ids) {
   if (!Array.isArray(ids) || !ids.length) return { ok: false, msg: '请选择要删除的商品' }
   try {
-    const r = await fetch(API + '/api/product/batch', {
+    const res = await adminWrite('/api/product/batch', {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Token': (store.admin && store.admin.token) || '',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
     })
-    const res = await r.json()
     if (res.code === 200) {
       await loadProducts()
       return { ok: true, msg: res.msg || '已批量删除' }
     }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效，请重新登录后台' } }
     return { ok: false, msg: res.msg || '批量删除失败' }
   } catch (e) {
     const set = new Set(ids.map(String))
