@@ -28,21 +28,7 @@
     </div>
 
     <div class="layout">
-      <!-- 分类侧栏 -->
-      <aside>
-        <h3>分类</h3>
-        <button
-          v-for="c in cats"
-          :key="c"
-          class="cat"
-          :class="{ active: store.cat === c }"
-          @click="setCat(c)"
-        >
-          {{ c === 'all' ? '全部商品' : catLabel(c) }}
-        </button>
-      </aside>
-
-      <!-- 主区 -->
+      <!-- 分类导航已移到页面顶部（搜索栏下方），这里只保留商品主区 -->
       <main>
         <div class="toolbar">
           <h2>
@@ -96,12 +82,10 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { store, setCat, setRate, setPage, applyFilter } from '../store.js'
+import { store, catLabel, setRate, setPage, applyFilter } from '../store.js'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
-// 分类取自 store.products（后台新增商品/分类后，首页自动出现），不再写死静态数据
-const cats = computed(() => ['all', ...new Set(store.products.map((p) => p.cat))])
 const current = ref(0)
 const minP = ref(null)
 const maxP = ref(null)
@@ -140,13 +124,6 @@ const shown = computed(() =>
 
 watch(pages, (p) => { if (store.page > p) store.page = p })
 
-function catLabel(c) {
-  const m = {
-    数码: '📱 数码电子', 家居: '🛋️ 家居生活', 美妆: '💄 美妆个护',
-    食品: '🍫 食品饮料', 运动: '⚽ 运动户外',
-  }
-  return m[c] || c
-}
 function onSort(e) { store.sort = e.target.value }
 function onFilter() {
   const min = minP.value?.value

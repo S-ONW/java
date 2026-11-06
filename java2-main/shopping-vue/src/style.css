@@ -46,11 +46,19 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .dot.on{background:#fff;width:22px;border-radius:6px}
 
 /* Layout */
-.layout{display:grid;grid-template-columns:210px 1fr;gap:24px;padding-bottom:40px}
-aside{background:var(--card);border-radius:var(--radius);padding:18px;height:fit-content;box-shadow:var(--shadow);position:sticky;top:84px}
-aside h3{font-size:13px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
-.cat{display:block;width:100%;text-align:left;background:transparent;padding:10px 12px;border-radius:10px;font-size:15px;color:var(--text);transition:.15s}
-.cat:hover{background:var(--bg)}.cat.active{background:var(--primary);color:#fff;font-weight:600}
+.layout{display:grid;grid-template-columns:1fr;gap:24px;padding-bottom:40px}
+
+/* 顶部第二行分类导航条：整条铺满页面宽度，内容与 .nav 左右对齐 */
+.cat-nav{
+  display:flex;align-items:center;gap:8px;
+  width:100%;box-sizing:border-box;
+  padding:10px max(20px, calc((100% - 1200px)/2 + 20px)) 12px;
+  border-top:1px solid var(--line);
+  overflow-x:auto;scrollbar-width:thin;
+}
+.cat-nav .cat{flex:1 1 0;min-width:max-content;display:inline-block;text-align:center;white-space:nowrap;background:var(--bg);border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-size:13px;color:var(--text);transition:.15s}
+.cat-nav .cat:hover{background:var(--card);border-color:var(--primary)}
+.cat-nav .cat.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
 .toolbar h2{font-size:20px}
@@ -196,7 +204,8 @@ footer{background:var(--card);border-top:1px solid var(--line);margin-top:20px}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media(max-width:860px){
-  .layout{grid-template-columns:1fr}aside{position:static;display:flex;gap:8px;overflow:auto}
+  .layout{grid-template-columns:1fr}
+  .cat-nav{padding:10px 14px 12px}
   .ck{grid-template-columns:1fr}.acct{grid-template-columns:1fr}
   .foot-in{grid-template-columns:1fr 1fr}.slide h1{font-size:22px}
   .stat{grid-template-columns:1fr 1fr}

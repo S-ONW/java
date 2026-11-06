@@ -81,6 +81,17 @@ export const pById = (id) => store.products.find((p) => p.id == id)
 export const money = (n) => '¥' + n
 export const stars = (r) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r))
 
+// ---------- 商品分类（顶部导航条与首页共用同一份数据） ----------
+// 后台新增商品/分类后，顶部导航条会自动多出对应按钮
+export const categories = computed(() => ['all', ...new Set(store.products.map((p) => p.cat))])
+export function catLabel(c) {
+  const m = {
+    数码: '📱 数码电子', 家居: '🛋️ 家居生活', 美妆: '💄 美妆个护',
+    食品: '🍫 食品饮料', 运动: '⚽ 运动户外',
+  }
+  return m[c] || c
+}
+
 export const cartCount = computed(() =>
   Object.values(store.cart).reduce((a, b) => a + b, 0)
 )

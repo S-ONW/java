@@ -26,12 +26,23 @@
         </div>
       </div>
     </div>
+
+    <!-- 分类导航条：位于搜索栏所在行的下方，随头部一起吸顶 -->
+    <nav v-if="store.view === 'home'" class="cat-nav">
+      <button
+        v-for="c in categories"
+        :key="c"
+        class="cat"
+        :class="{ active: store.cat === c }"
+        @click="pickCat(c)"
+      >{{ c === 'all' ? '全部商品' : catLabel(c) }}</button>
+    </nav>
   </header>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser } from '../store.js'
+import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat } from '../store.js'
 import logoUrl from '../assets/logo.jpg'
 
 const keyword = ref(store.keyword)
@@ -63,6 +74,9 @@ function goRegister() { showAuthMenu.value = false; openRegisterPage() }
 // 后台管理系统入口：已登录后台直接进管理页，否则先到后台登录页（后台不提供注册）。
 // go() 里还有权限守卫，非管理员即使直接调用也会被挡回首页。
 function onAdmin() { go(store.admin ? 'admin' : 'adminLogin') }
+
+// 顶部导航条选分类：切分类并回到首页（其它视图中点击也能直达首页）
+function pickCat(c) { setCat(c); go('home') }
 
 // 点击下拉以外的区域时收起菜单
 function onDocClick(e) {
