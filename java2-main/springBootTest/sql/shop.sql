@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 04/11/2026 09:58:33
+ Date: 06/11/2026 16:26:05
 */
 
 SET NAMES utf8mb4;
@@ -67,19 +67,23 @@ CREATE TABLE `user`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '邮箱（登录账号）',
   `nick` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '昵称（展示名称）',
-  `password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码（MD5）',
+  `password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码（明文存储，不加密）',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  `permission` tinyint NOT NULL DEFAULT 1 COMMENT '权限：1=默认权限，0=管理员权限',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-26 11:35:33');
-INSERT INTO `user` VALUES (3, 'rr@shop.local', 'rr', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-26 11:46:34');
-INSERT INTO `user` VALUES (4, 'dd@shop.local', 'dd', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-26 11:47:15');
-INSERT INTO `user` VALUES (5, 'cc@shop.local', 'cc', 'e10adc3949ba59abbe56e057f20f883e', '2026-10-28 09:03:40');
-INSERT INTO `user` VALUES (6, 'ww@shop.local', 'ww', 'e10adc3949ba59abbe56e057f20f883e', '2026-11-02 11:32:06');
+INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', '2026-10-26 11:35:33', 1);
+INSERT INTO `user` VALUES (3, 'rr@shop.local', 'rr', '123456', '2026-10-26 11:46:34', 1);
+INSERT INTO `user` VALUES (4, 'dd@shop.local', 'dd', '123456', '2026-10-26 11:47:15', 1);
+INSERT INTO `user` VALUES (5, 'cc@shop.local', 'cc', '123456', '2026-10-28 09:03:40', 1);
+INSERT INTO `user` VALUES (6, 'ww@shop.local', 'ww', '123456', '2026-11-02 11:32:06', 1);
+INSERT INTO `user` VALUES (7, 'admin@shop.local', 'admin', 'admin123', '2026-11-06 15:45:38', 0);
+INSERT INTO `user` VALUES (9, 'hhh@shop.local', 'hhh', '123456', '2026-11-06 16:04:32', 1);
+INSERT INTO `user` VALUES (10, 'ad@shop.local', 'ad', '123456', '2026-11-06 16:23:53', 1);
 
 SET FOREIGN_KEY_CHECKS = 1;

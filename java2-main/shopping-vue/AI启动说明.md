@@ -41,6 +41,20 @@ npm run dev
 - 后端带 devtools，改完代码执行 `./mvnw.cmd compile` 即热重启，不用重跑
 - **注意**：杀后台任务可能残留 java.exe 占用 8081，重启后端前先查 `netstat -ano | grep ":8081 "` 并 taskkill
 
+## 用户权限约定（2026-11-06 起）
+
+- `user` 表新增 `permission` 字段：`1` = 默认权限（注册用户），`0` = 管理员权限。
+- **密码明文存储、明文比对**，没有任何 MD5 / 加密；注册接口不接受客户端传的 permission，一律写 1。
+- 首页「⚙️ 后台管理」按钮只对 `permission = 0` 的登录用户可见（AppHeader 用 `isAdminUser`）。
+- 后台登录 `/api/admin/login` 不再读 `application-dev.properties` 的 admin 账号，改为查 `user` 表：
+  密码正确且 `permission = 0` 才发 token；权限 1 返回 403。`AdminService.check()` 每次还会重读库复核权限。
+- 内置管理员：`admin@shop.local` / 昵称 `admin` / 明文密码 `admin123` / permission 0（`sql/shop_db.sql`）。
+  演示普通用户：`demo@qq.com` / 昵称 演示用户 / 明文密码 `123456` / permission 1。
+- 老账号的 MD5('123456') 在 `db/schema.sql` 里自动还原成明文 `123456`；其他自定义密码需手动 UPDATE。
+- 前端 store.js 用 `store.user.permission`（登录接口返回）判断权限；**旧 localStorage 登录态没有该字段，
+  表现为看不到后台按钮，重新登录一次即可**。
+- 改动前端后依旧必须 `npm run build` 并把 dist 同步到 `src/main/resources/static` 与 `target/classes/static` 两处。
+
 ## 已知小毛病（不影响启动）
 
 - `application.properties` 引用的 `test`、`book.bookid` 配置不存在，仅影响 `/user/test` 演示接口显示 null

@@ -4,16 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.mapper.UserMapper;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * 用户服务：注册 / 登录
+ *
+ * 按需求：
+ *  - 密码明文存储、明文比对，不做任何加密
+ *  - 注册用户一律是默认权限 permission = 1
+ *  - 只有 permission = 0（管理员权限）才能进入后台管理系统（见 AdminService）
  */
 @Service
 public class UserService {
+
+    /** 默认权限：普通注册用户 */
+    public static final int PERMISSION_DEFAULT = 1;
+    /** 管理员权限 */
+    public static final int PERMISSION_ADMIN = 0;
 
     private final UserMapper userMapper;
 
@@ -21,13 +30,8 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
-    /** 密码 MD5 加密 */
-    private String md5(String pwd) {
-        return DigestUtils.md5DigestAsHex(pwd.getBytes(StandardCharsets.UTF_8));
-    }
-
     /**
-     * 注册：邮箱唯一性校验后入库
+     * 注册：邮箱唯一性校验后入库，权限固定为默认权限 1
      * @return 注册成功的用户（不含密码）
      */
     public User register(String email, String nick, String pwd) {
@@ -40,7 +44,8 @@ public class UserService {
         User u = new User();
         u.setEmail(email);
         u.setNick(nick);
-        u.setPassword(md5(pwd));
+        u.setPassword(pwd);                            // 明文入库，不加密
+        u.setPermission(PERMISSION_DEFAULT);          // 注册用户 = 默认权限 1
         u.setCreateTime(LocalDateTime.now());
         userMapper.insert(u);
         u.setPassword(null); // 不返回密码
@@ -48,7 +53,7 @@ public class UserService {
     }
 
     /**
-     * 登录：校验邮箱 + 密码
+     * 登录：校验邮箱 + 明文密码，返回带 permission 的用户信息（前端据此决定是否显示后台入口）
      */
     public User login(String email, String pwd) {
         User u = userMapper.selectOne(
@@ -56,9 +61,11 @@ public class UserService {
         if (u == null) {
             throw new BusinessException("账号不存在，请先注册");
         }
-        if (!u.getPassword().equals(md5(pwd))) {
+        if (!Objects.equals(u.getPassword(), pwd)) {   // 明文直接比对
             throw new BusinessException("密码错误");
         }
+        // 老数据没有 permission 字段值时按默认权限处理
+        if (u.getPermission() == null) u.setPermission(PERMISSION_DEFAULT);
         u.setPassword(null);
         return u;
     }

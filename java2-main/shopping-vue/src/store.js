@@ -57,6 +57,24 @@ export const store = reactive({
   toastShow: false,
 })
 
+// ---------- 权限 ----------
+// permission: 1 = 默认权限（注册用户，看不到后台入口、不能登录后台）
+//             0 = 管理员权限（首页可见「后台管理」按钮，且能登录后台管理系统）
+export const PERMISSION_DEFAULT = 1
+export const PERMISSION_ADMIN = 0
+
+/** 当前登录用户是否为管理员权限（0）。登录时由 /api/user/login 返回的 permission 决定 */
+export const isAdminUser = computed(() =>
+  !!store.user && Number(store.user.permission) === PERMISSION_ADMIN
+)
+
+// 旧版本会把后台登录态长期存在 localStorage。非管理员一律清掉，
+// 避免「换了个普通账号登录，却仍能用旧的后台 token 直接进管理页」。
+if (store.admin && !isAdminUser.value) {
+  store.admin = null
+  LS.set('shopAdmin', null)
+}
+
 // ---------- 纯函数 / 派生数据 ----------
 // 商品以 store.products 为准：后台管理系统改的数据会实时反映到首页 / 详情 / 购物车
 export const pById = (id) => store.products.find((p) => p.id == id)
@@ -104,6 +122,12 @@ export function toast(msg) {
 
 // ---------- 视图导航 ----------
 export function go(view) {
+  // 按钮隐藏之外的第二道防线：即使手动改 URL / 直接调 go()，
+  // 非管理员权限（permission !== 0）也进不了后台登录页与管理页。
+  if ((view === 'admin' || view === 'adminLogin') && !isAdminUser.value) {
+    toast('仅管理员权限（0）可进入后台管理系统')
+    view = 'home'
+  }
   store.drawer = ''
   store.modal = ''
   store.view = view
@@ -210,7 +234,19 @@ const API = 'http://localhost:8081'
 // 账号标识为「昵称」：登录校验以本表为准，只有"注册过的昵称 + 正确的密码"才能登录成功。
 // 后端（springBootTest，8081）启动时，注册会同步一份到后端（用昵称生成本地邮箱标识）；
 // 后端未启动时仅存本地，两种情况下登录规则完全一致。
-const localUsers = () => LS.get('shopUsers', [])
+// 每条记录都带 permission：注册写入 1（默认权限），内置管理员为 0。
+
+// 内置管理员，与数据库种子 sql/shop_db.sql 保持一致；仅在后端不可用时作为离线兜底。
+const LOCAL_ADMIN = { nick: 'admin', email: 'admin@shop.local', pwd: 'admin123', permission: PERMISSION_ADMIN }
+const localUsers = () => {
+  const list = LS.get('shopUsers', [])
+  return list.some((u) => u.email === LOCAL_ADMIN.email || u.nick === LOCAL_ADMIN.nick)
+    ? list
+    : [...list, LOCAL_ADMIN]
+}
+// 老数据没有 permission 字段时一律按默认权限处理
+const permOf = (u) => (u && Number(u.permission) === PERMISSION_ADMIN ? PERMISSION_ADMIN : PERMISSION_DEFAULT)
+
 function saveLocalUser(u) {
   const users = localUsers()
   const i = users.findIndex((x) => (u.nick && x.nick === u.nick) || (u.email && x.email === u.email))
@@ -243,7 +279,8 @@ export async function submitRegister(nick, pwd, captchaToken, captcha) {
     })
     const res = await r.json()
     if (res.code === 200) {
-      saveLocalUser({ nick, pwd })
+      // 注册用户一律默认权限 1；以后端返回的 permission 为准（后端不会接受前端传的权限）
+      saveLocalUser({ nick, pwd, permission: permOf(res.data) })
       return { ok: true, msg: '注册成功' }
     }
     // 后端按邮箱判重 → 对应到昵称判重
@@ -257,7 +294,7 @@ export async function submitRegister(nick, pwd, captchaToken, captcha) {
     if (localUsers().some((u) => u.nick === nick)) {
       return { ok: false, msg: '该昵称已注册，请直接登录' }
     }
-    saveLocalUser({ nick, pwd })
+    saveLocalUser({ nick, pwd, permission: PERMISSION_DEFAULT })
     return { ok: true, msg: '注册成功（离线模式，验证码未校验）' }
   }
 }
@@ -278,7 +315,13 @@ export async function submitAuth(name, pwd) {
     })
     const res = await r.json()
     if (res.code === 200 && res.data) {
-      store.user = { name: res.data.nick || nick, nick: res.data.nick || nick }
+      // 后端返回 permission：0 = 管理员（首页显示后台按钮），1 = 默认权限（不显示）
+      store.user = {
+        name: res.data.nick || nick,
+        nick: res.data.nick || nick,
+        email: res.data.email || nickToEmail(nick),
+        permission: permOf(res.data),
+      }
       save()
       return { ok: true, msg: '登录成功' }
     }
@@ -286,11 +329,16 @@ export async function submitAuth(name, pwd) {
     if (res.msg) return { ok: false, msg: res.msg }
     return { ok: false, msg: '登录失败，请稍后再试' }
   } catch (e) {
-    // 后端未启动 → 回退本地校验（保持离线可用）
-    const u = localUsers().find((x) => x.nick === nick)
+    // 后端未启动 → 回退本地校验（保持离线可用），同样带出 permission
+    const u = localUsers().find((x) => x.nick === nick || x.email === nick || x.email === nickToEmail(nick))
     if (!u) return { ok: false, msg: '昵称不存在，请先注册' }
     if (u.pwd !== pwd) return { ok: false, msg: '昵称或密码不正确' }
-    store.user = { name: u.nick, nick: u.nick }
+    store.user = {
+      name: u.nick,
+      nick: u.nick,
+      email: u.email || nickToEmail(u.nick),
+      permission: permOf(u),
+    }
     save()
     return { ok: true, msg: '登录成功' }
   }
@@ -369,7 +417,12 @@ export function payOrder(no) {
 }
 
 // ---------- 账户 ----------
-export function logout() { store.user = null; save(); toast('已退出登录') }
+export function logout() {
+  store.user = null
+  adminLogout()   // 同步清掉后台登录态，避免退出后仍残留管理员入口
+  save()
+  toast('已退出登录')
+}
 export function saveNick(nick) {
   if (store.user) { store.user.nick = nick || store.user.name; save(); toast('已保存') }
 }
@@ -393,6 +446,7 @@ export function subscribe(email) {
 // 后台负责对首页展示的购物数据（商品）做增删改查。
 // 后端可用 → 数据存 MySQL（product 表），并同步回首页；后端不可用 → 退化为浏览器本地数据，
 // 后台页面顶部会提示「离线模式」，保证功能任何情况下都能演示。
+// 权限：只有 permission = 0 的管理员能进入后台（前端 go/按钮拦截 + 后端 /api/admin/login 校验）。
 
 /** 拉取后端商品列表，覆盖本地数据（后台改动 → 首页立即生效） */
 export async function loadProducts() {
@@ -463,28 +517,34 @@ async function adminWrite(path, options = {}) {
 }
 
 /**
- * 管理员登录。后台只提供登录、不开放注册；账号在后端 application-dev.properties 配置
- * （默认 admin / admin123）。后端未启动时允许用同一默认账号进入离线模式。
+ * 后台登录。后台只提供登录、不开放注册：账号直接取 user 表，
+ * 只有 permission = 0（管理员权限）且明文密码正确才能登录；
+ * permission = 1 的默认权限用户后端会返回 403 拒绝。
+ * 前端先做一道权限拦截，后端 /api/admin/login 再做一次（防止伪造请求绕过）。
  */
 export async function adminLogin(username, pwd) {
-  const u = (username || '').trim()
-  if (!u || !pwd) return { ok: false, msg: '请输入账号和密码' }
+  const acct = (username || '').trim()
+  if (!acct || !pwd) return { ok: false, msg: '请输入账号和密码' }
+  if (!isAdminUser.value) {
+    return { ok: false, msg: '仅管理员权限（0）的账号可登录后台管理系统' }
+  }
   try {
     const r = await fetch(API + '/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: u, pwd }),
+      body: JSON.stringify({ username: acct, pwd }),
     })
     const res = await r.json()
     if (res.code === 200 && res.data) {
       store.admin = {
-        username: res.data.username || u,
+        username: res.data.username || acct,
         nick: res.data.nick || '管理员',
         token: res.data.token,
+        permission: PERMISSION_ADMIN,
         offline: false,
       }
       // 记住凭据，供 token 失效时静默重新登录（仅 sessionStorage，标签页关闭即失效）
-      adminCreds = { username: u, pwd }
+      adminCreds = { username: acct, pwd }
       try { sessionStorage.setItem('shopAdminCreds', JSON.stringify(adminCreds)) } catch (e) { /* ignore */ }
       save()
       await loadProducts()
@@ -492,14 +552,22 @@ export async function adminLogin(username, pwd) {
     }
     return { ok: false, msg: res.msg || '账号或密码不正确' }
   } catch (e) {
-    // 后端未启动 → 离线模式（默认账号）
-    if (u === 'admin' && pwd === 'admin123') {
-      store.admin = { username: u, nick: '管理员', token: 'offline', offline: true }
-      adminCreds = null
-      save()
-      return { ok: true, msg: '离线模式登录成功（数据仅存本地）' }
+    // 后端未启动 → 离线模式：同样必须命中本地账号表里 permission = 0 的管理员
+    const u = localUsers().find((x) => x.nick === acct || x.email === acct || x.email === nickToEmail(acct))
+    if (!u || u.pwd !== pwd) return { ok: false, msg: '账号或密码不正确' }
+    if (permOf(u) !== PERMISSION_ADMIN) {
+      return { ok: false, msg: '该账号为默认权限（1），无权登录后台管理系统' }
     }
-    return { ok: false, msg: '无法连接后端，离线模式请用 admin / admin123' }
+    store.admin = {
+      username: u.nick,
+      nick: u.nick,
+      token: 'offline',
+      permission: PERMISSION_ADMIN,
+      offline: true,
+    }
+    adminCreds = null
+    save()
+    return { ok: true, msg: '离线模式登录成功（数据仅存本地）' }
   }
 }
 

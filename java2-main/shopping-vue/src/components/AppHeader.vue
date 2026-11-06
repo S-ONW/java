@@ -9,7 +9,8 @@
       <button class="icon-btn" @click="openWish" title="收藏夹">❤️ <span class="badge">{{ store.wish.length }}</span></button>
       <button class="icon-btn" @click="go('orders')" title="我的订单">📦 <span class="badge" v-show="store.orders.length">{{ store.orders.length }}</span></button>
       <button class="icon-btn" @click="toggleTheme" title="暗色模式">{{ store.theme === 'dark' ? '☀️' : '🌙' }}</button>
-      <button class="icon-btn admin-entry" @click="onAdmin" title="后台管理系统">⚙️ 后台管理</button>
+      <!-- 仅 permission = 0 的管理员可见后台管理系统入口；默认权限（1）完全隐藏 -->
+      <button v-if="isAdminUser" class="icon-btn admin-entry" @click="onAdmin" title="后台管理系统">⚙️ 后台管理</button>
       <button class="icon-btn" @click="openCart" title="购物车">🛒 <span class="badge">{{ cartCount }}</span></button>
       <div v-if="store.user" class="avatar" @click="openAccount" title="账户">{{ store.user.name[0].toUpperCase() }}</div>
       <div v-else class="auth-wrap" ref="authWrap">
@@ -25,7 +26,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage } from '../store.js'
+import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser } from '../store.js'
 
 const keyword = ref(store.keyword)
 const showAuthMenu = ref(false)
@@ -43,7 +44,8 @@ function toggleAuthMenu() { showAuthMenu.value = !showAuthMenu.value }
 function goLogin() { showAuthMenu.value = false; openLoginPage() }
 function goRegister() { showAuthMenu.value = false; openRegisterPage() }
 
-// 后台管理系统入口：已登录直接进管理页，未登录先到后台登录页（后台不提供注册）
+// 后台管理系统入口：已登录后台直接进管理页，否则先到后台登录页（后台不提供注册）。
+// go() 里还有权限守卫，非管理员即使直接调用也会被挡回首页。
 function onAdmin() { go(store.admin ? 'admin' : 'adminLogin') }
 
 // 点击下拉以外的区域时收起菜单

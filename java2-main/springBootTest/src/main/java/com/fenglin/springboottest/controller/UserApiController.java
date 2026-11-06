@@ -14,8 +14,11 @@ import java.util.Map;
 /**
  * 用户接口（供 Vue 前端调用的 REST API）
  *
- * POST /api/user/register  注册  { email, nick, pwd }
+ * POST /api/user/register  注册  { email, nick, pwd, captchaToken, captcha }
  * POST /api/user/login     登录  { email, pwd }
+ *
+ * 注册接口不接受也不读取客户端传来的 permission：一律落库为默认权限 1，
+ * 防止有人通过伪造请求把自己注册成管理员（0）。管理员只能由数据库侧设置。
  */
 @RestController
 @RequestMapping("/api/user")

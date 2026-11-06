@@ -10,7 +10,7 @@
       <form @submit.prevent="submit" novalidate>
         <div class="field" :class="{ err: errors.username }">
           <label>管理员账号</label>
-          <input v-model="form.username" placeholder="请输入管理员账号" autocomplete="off" @blur="checkUsername" />
+          <input v-model="form.username" placeholder="请输入管理员账号（昵称或邮箱）" autocomplete="off" @blur="checkUsername" />
           <p class="tip" v-if="errors.username">{{ errors.username }}</p>
         </div>
 
@@ -30,8 +30,8 @@
         </button>
       </form>
 
-      <p class="note">🔒 本系统仅开放登录，不提供注册入口，账号由系统管理员分配。</p>
-      <p class="demo">演示账号：<b>admin</b> / <b>admin123</b>（可在后端 application-dev.properties 中修改）</p>
+      <p class="note">🔒 仅用户表中权限为 <b>0（管理员权限）</b> 的账号可登录；权限为 1 的默认用户会被拒绝。后台不提供注册入口。</p>
+      <p class="demo">内置管理员：<b>admin</b> / <b>admin123</b>（user 表 permission = 0，可直接改库修改）</p>
 
       <a class="back" @click="back">← 返回商城首页</a>
     </div>
@@ -40,9 +40,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { store, adminLogin, go, toast } from '../store.js'
+import { store, adminLogin, go, toast, isAdminUser } from '../store.js'
 
-const form = reactive({ username: '', pwd: '' })
+// 已在商城前台用管理员账号登录时，预填账号，只需再输一次密码
+const form = reactive({ username: store.user?.nick || '', pwd: '' })
 const errors = reactive({ username: '', pwd: '' })
 const showPwd = ref(false)
 const loading = ref(false)
@@ -73,8 +74,9 @@ async function submit() {
 
 function back() { go('home') }
 
-// 已登录状态下直接进入管理页
+// 已有有效后台登录态时直接进入管理页；非管理员权限一律回商城首页
 onMounted(() => {
+  if (!isAdminUser.value) { go('home'); return }
   if (store.admin) go('admin')
 })
 </script>

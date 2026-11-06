@@ -43,8 +43,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { store, closeDrawer, loadProducts } from './store.js'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { store, closeDrawer, loadProducts, isAdminUser, adminLogout, go } from './store.js'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import HomeView from './components/HomeView.vue'
@@ -64,8 +64,19 @@ import Toast from './components/Toast.vue'
 import AdminLogin from './components/AdminLogin.vue'
 import AdminView from './components/AdminView.vue'
 
-// 后台视图（登录页 / 管理页）走独立布局，不套商城的头部与页脚
-const isAdminView = computed(() => store.view === 'adminLogin' || store.view === 'admin')
+// 后台视图（登录页 / 管理页）走独立布局，不套商城的头部与页脚。
+// 必须同时满足「当前登录用户是管理员权限（0）」，否则即便视图被改成 admin 也不渲染后台。
+const isAdminView = computed(() =>
+  isAdminUser.value && (store.view === 'adminLogin' || store.view === 'admin')
+)
+
+// 登录态变化（退出登录 / 换成普通账号）时，立刻把后台视图踢回商城首页
+watch(isAdminUser, (ok) => {
+  if (!ok && (store.view === 'admin' || store.view === 'adminLogin')) {
+    adminLogout()
+    go('home')
+  }
+})
 
 const showToTop = ref(false)
 function onScroll() { showToTop.value = window.scrollY > 300 }
@@ -76,6 +87,10 @@ onMounted(() => {
   //  - 已登录（localStorage 有 shopUser）→ 直接进商城首页
   //  - 带 #login（如 register.html 注册成功后的跳转目标）→ 登录页
   //  - 其他情况 → 默认打开注册页面
+  // 兜底：非管理员不得停留在后台视图（例如旧版本残留的视图状态）
+  if ((store.view === 'admin' || store.view === 'adminLogin') && !isAdminUser.value) {
+    store.view = 'home'
+  }
   if (location.hash.indexOf('#login') === 0 && !store.user) {
     // 从 register.html 注册成功跳转过来：取出预填昵称（用后即清空）
     const prefill = localStorage.getItem('shopPrefillName')

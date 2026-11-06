@@ -22,8 +22,14 @@ public class User {
     /** 昵称（展示名称） */
     private String nick;
 
-    /** 密码（MD5 存储） */
+    /** 密码（明文存储，按需求不做加密） */
     private String password;
+
+    /**
+     * 权限：1 = 默认权限（注册用户，看不到后台入口、不能登录后台管理系统）
+     *       0 = 管理员权限（首页可见「后台管理」按钮，且可登录后台）
+     */
+    private Integer permission;
 
     /** 注册时间 */
     private LocalDateTime createTime;
@@ -38,6 +44,8 @@ public class User {
     public void setNick(String nick) { this.nick = nick; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public Integer getPermission() { return permission; }
+    public void setPermission(Integer permission) { this.permission = permission; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }

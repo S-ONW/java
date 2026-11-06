@@ -153,7 +153,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
-  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, adminCheck, go, toast,
+  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, adminCheck, go, toast, isAdminUser,
 } from '../store.js'
 
 const kw = ref('')
@@ -292,6 +292,8 @@ function back() { go('home') }
 // 进入后台页时复核登录态：后端 token 为内存态，重启/过期后 localStorage 里仍是旧 token，
 // 若不复核就会“显示已登录却无法增删改”。校验失败则清空并跳回登录页重新获取 token。
 onMounted(async () => {
+  // 权限守卫：只有 permission = 0 的管理员能停留在此页
+  if (!isAdminUser.value) { adminLogout(); go('home'); return }
   if (!store.admin) { go('adminLogin'); return }
   if (!store.admin.offline) {
     const valid = await adminCheck()

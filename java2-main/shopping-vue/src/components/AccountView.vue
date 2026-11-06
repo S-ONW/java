@@ -23,6 +23,7 @@
           </div>
           <div class="field"><label>账号</label><input :value="store.user.name" disabled /></div>
           <div class="field"><label>昵称</label><input v-model="nick" /></div>
+          <div class="field"><label>账号权限</label><input :value="isAdminUser ? '管理员权限（0）· 可进入后台管理' : '默认权限（1）'" disabled /></div>
           <button class="btn" @click="save">保存资料</button>
         </template>
 
@@ -57,7 +58,7 @@
 import { ref, computed, watch } from 'vue'
 import {
   store, cartCount, saveNick, setAcctTab, openAddrForm,
-  editAddr, deleteAddr, setDefAddr, logout, go,
+  editAddr, deleteAddr, setDefAddr, logout, go, isAdminUser,
 } from '../store.js'
 
 const nick = ref(store.user?.nick || store.user?.name || '')
