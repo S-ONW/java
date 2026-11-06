@@ -25,6 +25,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .nav{display:flex;align-items:center;gap:14px;padding:14px 20px;max-width:1200px;margin:0 auto}
 .logo{font-size:22px;font-weight:800;color:var(--primary);letter-spacing:.5px;white-space:nowrap;cursor:pointer}
 .logo span{color:var(--text)}
+.logo .logo-img{height:56px;width:auto;display:block;border-radius:10px}
 .search{flex:1;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:8px 16px;gap:8px;min-width:0}
 .search input{flex:1;border:none;background:transparent;outline:none;font-size:14px;color:var(--text)}
 .search button{background:var(--primary);color:#fff;border-radius:999px;padding:6px 18px;font-weight:600;white-space:nowrap}

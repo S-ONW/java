@@ -1,7 +1,12 @@
 <template>
   <header>
     <div class="nav">
-      <div class="logo" @click="go('home')">云购<span>商城</span></div>
+      <div class="logo" @click="go('home')">
+        <img :src="logoUrl" alt="云购商城" class="logo-img" />
+        <transition name="hint-pop">
+          <span v-if="showHint" class="logo-hint">点我回到首页</span>
+        </transition>
+      </div>
       <div class="search">
         <input v-model="keyword" type="text" placeholder="搜索商品，如 耳机 / 咖啡 / 瑜伽…" @keyup.enter="onSearch" />
         <button @click="onSearch">搜索</button>
@@ -27,10 +32,21 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser } from '../store.js'
+import logoUrl from '../assets/logo.jpg'
 
 const keyword = ref(store.keyword)
 const showAuthMenu = ref(false)
 const authWrap = ref(null)
+
+// 每 5 秒在 Logo 附近弹一次「点我回到首页」提示，2 秒后自动消失
+const showHint = ref(false)
+let hintTimer = null
+function tickHint() {
+  showHint.value = true
+  setTimeout(() => { showHint.value = false }, 2000)
+}
+onMounted(() => { hintTimer = setInterval(tickHint, 5000) })
+onUnmounted(() => { clearInterval(hintTimer) })
 
 function onSearch() {
   store.keyword = keyword.value.trim()
@@ -59,6 +75,43 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <style scoped>
+.logo { position: relative; display: flex; align-items: center; }
+.logo-hint {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  z-index: 70;
+}
+.logo-hint::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--primary);
+  border-bottom: none;
+}
+.hint-pop-enter-active { animation: hintIn .3s ease; }
+.hint-pop-leave-active { animation: hintOut .3s ease; }
+@keyframes hintIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes hintOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(6px); }
+}
 .auth-wrap { position: relative; display: flex; }
 .admin-entry {
   white-space: nowrap;
