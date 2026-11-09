@@ -11,6 +11,7 @@
         <input v-model="keyword" type="text" placeholder="搜索商品，如 耳机 / 咖啡 / 瑜伽…" @keyup.enter="onSearch" />
         <button @click="onSearch">搜索</button>
       </div>
+      <button class="icon-btn" @click="onCoupon" title="我的优惠券">🎫 <span class="badge" v-show="store.myCoupons.length">{{ store.myCoupons.length }}</span></button>
       <button class="icon-btn" @click="openWish" title="收藏夹">❤️ <span class="badge">{{ store.wish.length }}</span></button>
       <button class="icon-btn" @click="go('orders')" title="我的订单">📦 <span class="badge" v-show="store.orders.length">{{ store.orders.length }}</span></button>
       <button class="icon-btn" @click="toggleTheme" title="暗色模式">{{ store.theme === 'dark' ? '☀️' : '🌙' }}</button>
@@ -35,14 +36,17 @@
         class="cat"
         :class="{ active: store.cat === c }"
         @click="pickCat(c)"
-      >{{ c === 'all' ? '全部商品' : catLabel(c) }}</button>
+      >
+        <span class="cat-ico" aria-hidden="true">{{ c === 'all' ? '🛍️' : '' }}</span>
+        <span class="cat-txt">{{ c === 'all' ? '全部商品' : catLabel(c) }}</span>
+      </button>
     </nav>
   </header>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat } from '../store.js'
+import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat, toast, openAuth } from '../store.js'
 import logoUrl from '../assets/logo.jpg'
 
 const keyword = ref(store.keyword)
@@ -77,6 +81,16 @@ function onAdmin() { go(store.admin ? 'admin' : 'adminLogin') }
 
 // 顶部导航条选分类：切分类并回到首页（其它视图中点击也能直达首页）
 function pickCat(c) { setCat(c); go('home') }
+
+// 我的优惠券：未登录时提示，已登录才进入领券中心
+function onCoupon() {
+  if (!store.user) {
+    toast('请先登录后再查看我的优惠券')
+    openAuth('login')
+    return
+  }
+  go('coupon')
+}
 
 // 点击下拉以外的区域时收起菜单
 function onDocClick(e) {

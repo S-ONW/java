@@ -1,5 +1,5 @@
 import { reactive, computed } from 'vue'
-import { PRODUCTS, COUPONS, SHIP_FREE } from './data.js'
+import { PRODUCTS, COUPONS, COUPON_POOL, SHIP_FREE } from './data.js'
 
 // ---------- localStorage 封装 ----------
 const LS = {
@@ -33,7 +33,9 @@ export const store = reactive({
   orders: LS.get('shopOrders', []),
   addresses: LS.get('shopAddr', []),
   user: LS.get('shopUser', null),
-  coupon: null,
+  coupon: LS.get('shopCoupon', null),
+  // 用户已领取的优惠券 code 列表（领券中心领取后，结账时可用于抵扣）
+  myCoupons: LS.get('shopMyCoupons', []),
   selAddr: LS.get('shopSelAddr', null),
 
   detailId: null,
@@ -51,8 +53,6 @@ export const store = reactive({
   success: null,
   prefillName: '',       // 注册成功后带到登录页预填的昵称
 
-  cartMsg: '',
-  coMsg: '',
   toastMsg: '',
   toastShow: false,
 })
@@ -102,9 +102,21 @@ export const cartSub = computed(() =>
   )
 )
 
-export function couponDisc(sub) {
-  if (!store.coupon) return 0
-  const c = COUPONS[store.coupon]
+// 根据当前选中的优惠券 code 解析券信息（优先查 COUPON_POOL，兼容旧的 COUPONS）
+export function couponInfo(code) {
+  if (!code) return null
+  const c = COUPON_POOL.find((x) => x.code === code)
+  if (c) return c
+  const old = COUPONS[code]
+  if (old) return { code, type: old.type, val: old.val, amount: old.label, min: 0 }
+  return null
+}
+
+// 计算某张券在当前订单小计 sub 下的减免金额；券不可用（未选/不满足门槛）返回 0
+export function couponDisc(sub, code) {
+  const c = couponInfo(code == null ? store.coupon : code)
+  if (!c) return 0
+  if (sub < (c.min || 0)) return 0
   return c.type === 'pct' ? Math.round(sub * c.val) : Math.min(c.val, sub)
 }
 export function shipFee(sub) {
@@ -120,6 +132,8 @@ function save() {
   LS.set('shopSelAddr', store.selAddr)
   LS.set('shopProducts', store.products)
   LS.set('shopAdmin', store.admin)
+  LS.set('shopMyCoupons', store.myCoupons)
+  LS.set('shopCoupon', store.coupon)
 }
 
 // ---------- Toast ----------
@@ -219,18 +233,76 @@ export function cartDec(id) {
 }
 export function cartDel(id) { delete store.cart[id]; save() }
 
-export function applyCartCoupon(code) {
-  code = (code || '').trim().toUpperCase()
-  if (!code) { store.cartMsg = '请输入优惠码'; return }
-  if (COUPONS[code]) { store.coupon = code; store.cartMsg = '已生效：' + COUPONS[code].label }
-  else { store.coupon = null; store.cartMsg = '优惠码无效' }
+// ---------- 结账选择优惠券 ----------
+// 选中某张已领取的优惠券（code），作为本次订单的抵扣券
+export function selectCoupon(code) {
+  if (!store.myCoupons.includes(code)) {
+    toast('你还没有这张优惠券，请先去领券中心领取')
+    return false
+  }
+  store.coupon = code
+  return true
 }
-export function applyCheckoutCoupon(code) {
-  code = (code || '').trim().toUpperCase()
-  if (COUPONS[code]) { store.coupon = code; store.coMsg = '已生效：' + COUPONS[code].label }
-  else if (code) { store.coupon = null; store.coMsg = '优惠码无效' }
-  else { store.coupon = null; store.coMsg = '' }
+// 取消使用优惠券
+export function clearCoupon() {
+  store.coupon = null
 }
+
+// ---------- 领券中心 ----------
+// 领取优惠券：未登录需先登录；重复领取同一张券会被拦截。
+// 优先写后端（POST /api/coupon/claim），后端未启动时回退 localStorage。
+export async function claimCoupon(code) {
+  if (!store.user) {
+    toast('请先登录后再领取优惠券')
+    return 'login'
+  }
+  if (store.myCoupons.includes(code)) {
+    toast('这张优惠券你已经领过啦')
+    return false
+  }
+  const email = store.user.email || (store.user.name + '@shop.local')
+  try {
+    const r = await fetch(API + '/api/coupon/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    })
+    const res = await r.json()
+    if (res.code === 200) {
+      store.myCoupons.push(code)
+      LS.set('shopMyCoupons', store.myCoupons)
+      toast('🎉 领取成功，已放入「我的优惠券」')
+      return true
+    }
+    if (res.code === 409) { toast(res.msg || '这张优惠券你已经领过啦'); return false }
+    // 其它错误也视为失败，但不再回退本地（保持与后端一致）
+    toast(res.msg || '领取失败，请稍后再试')
+    return false
+  } catch (e) {
+    // 后端未启动 → 回退本地领取
+    store.myCoupons.push(code)
+    LS.set('shopMyCoupons', store.myCoupons)
+    toast('🎉 领取成功（离线模式）')
+    return true
+  }
+}
+
+// 从后端拉取当前用户已领取的优惠券 code 列表；后端不可用则沿用 localStorage
+export async function loadMyCoupons() {
+  if (!store.user) return
+  const email = store.user.email || (store.user.name + '@shop.local')
+  try {
+    const r = await fetch(API + '/api/coupon/list?email=' + encodeURIComponent(email))
+    const res = await r.json()
+    if (res.code === 200 && Array.isArray(res.data)) {
+      store.myCoupons = res.data
+      LS.set('shopMyCoupons', store.myCoupons)
+    }
+  } catch (e) {
+    // 后端未启动，沿用本地已领记录
+  }
+}
+
 export function toCheckout() { store.drawer = ''; go('checkout') }
 
 // ---------- 登录 / 注册 ----------

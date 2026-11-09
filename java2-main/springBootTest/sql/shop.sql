@@ -14,6 +14,10 @@
  Date: 06/11/2026 16:26:05
 */
 
+-- 建库（若库不存在则创建），确保空数据库下也能独立执行
+CREATE DATABASE IF NOT EXISTS `shop` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `shop`;
+
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -85,5 +89,22 @@ INSERT INTO `user` VALUES (6, 'ww@shop.local', 'ww', '123456', '2026-11-02 11:32
 INSERT INTO `user` VALUES (7, 'admin@shop.local', 'admin', 'admin123', '2026-11-06 15:45:38', 0);
 INSERT INTO `user` VALUES (9, 'hhh@shop.local', 'hhh', '123456', '2026-11-06 16:04:32', 1);
 INSERT INTO `user` VALUES (10, 'ad@shop.local', 'ad', '123456', '2026-11-06 16:23:53', 1);
+
+-- ----------------------------
+-- Table structure for user_coupon
+-- ----------------------------
+DROP TABLE IF EXISTS `user_coupon`;
+CREATE TABLE `user_coupon`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `user_email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户邮箱（关联 user.email，登录账号）',
+  `coupon_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '优惠券 code（对应前端 COUPON_POOL）',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of user_coupon
+-- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;

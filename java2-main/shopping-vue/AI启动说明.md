@@ -48,7 +48,7 @@ npm run dev
 - 首页「⚙️ 后台管理」按钮只对 `permission = 0` 的登录用户可见（AppHeader 用 `isAdminUser`）。
 - 后台登录 `/api/admin/login` 不再读 `application-dev.properties` 的 admin 账号，改为查 `user` 表：
   密码正确且 `permission = 0` 才发 token；权限 1 返回 403。`AdminService.check()` 每次还会重读库复核权限。
-- 内置管理员：`admin@shop.local` / 昵称 `admin` / 明文密码 `admin123` / permission 0（`sql/shop_db.sql`）。
+- 内置管理员：`admin@shop.local` / 昵称 `admin` / 明文密码 `admin123` / permission 0（`sql/shop.sql`）。
   演示普通用户：`demo@qq.com` / 昵称 演示用户 / 明文密码 `123456` / permission 1。
 - 老账号的 MD5('123456') 在 `db/schema.sql` 里自动还原成明文 `123456`；其他自定义密码需手动 UPDATE。
 - 前端 store.js 用 `store.user.permission`（登录接口返回）判断权限；**旧 localStorage 登录态没有该字段，

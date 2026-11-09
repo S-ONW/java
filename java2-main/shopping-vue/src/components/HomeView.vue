@@ -8,6 +8,7 @@
         class="slide"
         :class="{ active: i === current }"
         :style="{ background: b.bg }"
+        @click="onBanner(b)"
       >
         <div>
           <h1>{{ b.h }}</h1>
@@ -65,7 +66,7 @@
           <div v-if="!shown.length" class="empty">😢 没有找到符合条件的商品</div>
         </div>
 
-        <div class="pager" v-if="total > store.perPage">
+        <div class="pager" v-if="store.cat !== 'all' && total > store.perPage">
           <button :disabled="store.page === 1" @click="setPage(store.page - 1)">‹</button>
           <button
             v-for="i in pages"
@@ -82,7 +83,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { store, catLabel, setRate, setPage, applyFilter } from '../store.js'
+import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
@@ -119,7 +120,9 @@ const sorted = computed(() => {
 const total = computed(() => sorted.value.length)
 const pages = computed(() => Math.max(1, Math.ceil(total.value / store.perPage)))
 const shown = computed(() =>
-  sorted.value.slice((store.page - 1) * store.perPage, store.page * store.perPage)
+  store.cat === 'all'
+    ? sorted.value
+    : sorted.value.slice((store.page - 1) * store.perPage, store.page * store.perPage)
 )
 
 watch(pages, (p) => { if (store.page > p) store.page = p })
@@ -129,5 +132,17 @@ function onFilter() {
   const min = minP.value?.value
   const max = maxP.value?.value
   applyFilter(min, max)
+}
+
+// 点击 Banner 跳转：coupon → 领券中心；cat:xxx → 切到对应分类
+function onBanner(b) {
+  if (!b.link) return
+  if (b.link === 'coupon') {
+    go('coupon')
+  } else if (b.link.startsWith('cat:')) {
+    const cat = b.link.slice(4)
+    setCat(cat)
+    go('home')
+  }
 }
 </script>

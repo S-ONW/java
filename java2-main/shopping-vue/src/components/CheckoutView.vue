@@ -47,11 +47,31 @@
 
         <div class="panel">
           <h3>优惠券</h3>
-          <div class="coupon" style="padding:0;border:none">
-            <input v-model="coInput" placeholder="优惠码（SAVE20 / WELCOME10 / VIP30）" />
-            <button @click="onApply">使用</button>
+          <div v-if="!myCoupons.length" class="cp-tip">
+            暂无可用优惠券，
+            <a @click="go('coupon')" style="color:var(--primary);cursor:pointer">去领券中心领取</a>
           </div>
-          <div class="disc">{{ store.coMsg }}</div>
+          <div v-else class="cp-list">
+            <div
+              v-for="c in myCoupons"
+              :key="c.code"
+              class="cp-item"
+              :class="{ on: store.coupon === c.code, dis: !c.usable }"
+              @click="onPick(c)"
+            >
+              <div class="cp-item-amount">{{ c.amount }}</div>
+              <div class="cp-item-info">
+                <div class="cp-item-title">{{ c.title }}</div>
+                <div class="cp-item-cond">{{ c.cond }}</div>
+              </div>
+              <div class="cp-item-state">
+                <span v-if="c.usable && store.coupon !== c.code" class="cp-use">使用</span>
+                <span v-else-if="c.usable && store.coupon === c.code" class="cp-used">已选 ✓</span>
+                <span v-else class="cp-lock">未达门槛</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="store.coupon" class="cp-cancel" @click="clearCoupon">取消使用优惠券</div>
         </div>
       </div>
 
@@ -78,21 +98,35 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch, onMounted } from 'vue'
 import {
-  store, pById, money, cartSub, couponDisc, shipFee,
+  store, pById, money, cartSub, couponDisc, couponInfo, shipFee,
   go, selectAddr, editAddr, deleteAddr, setPayMethod, openAddrForm,
-  applyCheckoutCoupon, placeOrder, toast,
+  selectCoupon, clearCoupon, placeOrder, toast, loadMyCoupons,
 } from '../store.js'
 
 const pays = [['wechat', '💚', '微信支付'], ['alipay', '🔵', '支付宝'], ['cod', '📦', '货到付款']]
 const ids = computed(() => Object.keys(store.cart))
-const coInput = ref(store.coupon || '')
 const disc = computed(() => couponDisc(cartSub.value))
 const ship = computed(() => shipFee(cartSub.value))
 const total = computed(() => Math.max(0, cartSub.value - disc.value) + ship.value)
 
-function onApply() { applyCheckoutCoupon(coInput.value) }
+// 已领取的优惠券，附上「当前订单是否可用」判断
+const myCoupons = computed(() =>
+  store.myCoupons
+    .map((code) => couponInfo(code))
+    .filter(Boolean)
+    .map((c) => ({ ...c, usable: cartSub.value >= (c.min || 0) }))
+)
+
+// 进入结账页时同步已领券
+onMounted(() => { if (store.user) loadMyCoupons() })
+
+function onPick(c) {
+  if (!c.usable) { toast('订单金额未达到该券使用门槛'); return }
+  if (store.coupon === c.code) { clearCoupon(); return }
+  selectCoupon(c.code)
+}
 
 watch(
   ids,
@@ -100,3 +134,29 @@ watch(
   { immediate: true }
 )
 </script>
+
+<style scoped>
+.cp-tip{font-size:13px;color:var(--muted);padding:6px 0}
+.cp-list{display:flex;flex-direction:column;gap:10px}
+.cp-item{
+  display:flex;align-items:center;gap:14px;
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  cursor:pointer;transition:.15s;background:var(--card);
+}
+.cp-item:hover{border-color:var(--primary)}
+.cp-item.on{border-color:var(--primary);background:rgba(77,163,255,.08);box-shadow:0 0 0 2px rgba(77,163,255,.15)}
+.cp-item.dis{opacity:.55;cursor:not-allowed}
+.cp-item-amount{
+  min-width:64px;text-align:center;font-size:18px;font-weight:800;color:var(--primary);
+  background:var(--bg);border-radius:10px;padding:10px 8px;flex-shrink:0;
+}
+.cp-item-info{flex:1;min-width:0}
+.cp-item-title{font-size:14px;font-weight:600}
+.cp-item-cond{font-size:12px;color:var(--muted);margin-top:2px}
+.cp-item-state{flex-shrink:0}
+.cp-use{font-size:12px;color:var(--primary);border:1px solid var(--primary);border-radius:999px;padding:4px 12px;font-weight:600}
+.cp-used{font-size:12px;color:#fff;background:var(--primary);border-radius:999px;padding:4px 12px;font-weight:600}
+.cp-lock{font-size:12px;color:var(--muted);background:var(--bg);border-radius:999px;padding:4px 12px}
+.cp-cancel{font-size:12px;color:var(--muted);text-align:right;margin-top:8px;cursor:pointer}
+.cp-cancel:hover{color:var(--primary)}
+</style>

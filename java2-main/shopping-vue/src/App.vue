@@ -16,6 +16,7 @@
       <AccountView v-else-if="store.view === 'account'" />
       <RegisterView v-else-if="store.view === 'register'" />
       <LoginView v-else-if="store.view === 'login'" />
+      <CouponView v-else-if="store.view === 'coupon'" />
     </main>
 
     <AppFooter />
@@ -53,6 +54,7 @@ import OrdersView from './components/OrdersView.vue'
 import AccountView from './components/AccountView.vue'
 import RegisterView from './components/RegisterView.vue'
 import LoginView from './components/LoginView.vue'
+import CouponView from './components/CouponView.vue'
 import CartDrawer from './components/CartDrawer.vue'
 import WishDrawer from './components/WishDrawer.vue'
 import OrderDrawer from './components/OrderDrawer.vue'

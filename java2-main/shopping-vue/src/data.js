@@ -1,8 +1,8 @@
 // 商品/广告/优惠等静态数据，从原 shopping.html 抽取而来
 export const BANNERS = [
-  { bg: "linear-gradient(120deg,#7cc4ff,#4da3ff 60%,#3a7bd5)", h: "全场低至 5 折 🎉", p: "精选好物 · 极速发货 · 七天无理由退换", t: "新人专享 · 满 99 包邮", d: "🛍️" },
-  { bg: "linear-gradient(120deg,#5b8cff,#3a5cff)", h: "数码焕新季 ⚡", p: "耳机 / 键盘 / 手表 限时直降", t: "晒单返现 · 最高返 50", d: "🎧" },
-  { bg: "linear-gradient(120deg,#1ec98b,#0fa972)", h: "健康生活节 🌿", p: "瑜伽 / 运动 / 个护 满 199 减 30", t: "会员双倍积分", d: "🧘" },
+  { bg: "linear-gradient(120deg,#7cc4ff,#4da3ff 60%,#3a7bd5)", h: "全场低至 5 折 🎉", p: "精选好物 · 极速发货 · 七天无理由退换", t: "新人专享 · 满 99 包邮", d: "🛍️", link: "coupon" },
+  { bg: "linear-gradient(120deg,#5b8cff,#3a5cff)", h: "数码焕新季 ⚡", p: "耳机 / 键盘 / 手表 限时直降", t: "晒单返现 · 最高返 50", d: "🎧", link: "cat:数码" },
+  { bg: "linear-gradient(120deg,#1ec98b,#0fa972)", h: "健康生活节 🌿", p: "瑜伽 / 运动 / 个护 满 199 减 30", t: "会员双倍积分", d: "🧘", link: "cat:运动" },
 ]
 
 export const PRODUCTS = [
@@ -31,6 +31,17 @@ export const COUPONS = {
   WELCOME10: { type: "fix", val: 10, label: "立减 ¥10" },
   VIP30: { type: "fix", val: 30, label: "VIP 立减 ¥30" },
 }
+
+// 领券中心可领取的优惠券列表（点击首页 Banner 进入「领优惠券」界面）
+// min = 使用门槛（订单商品小计需 >= min 才可用，0 表示无门槛）
+export const COUPON_POOL = [
+  { code: "SAVE20", title: "全场 8 折券", desc: "全场商品通用 · 不限品类", type: "pct", val: 0.2, amount: "8 折", cond: "无门槛", min: 0 },
+  { code: "WELCOME10", title: "新人立减券", desc: "新客专享 · 无门槛立减", type: "fix", val: 10, amount: "¥10", cond: "无门槛", min: 0 },
+  { code: "VIP30", title: "VIP 大额券", desc: "VIP 专享 · 大额立减", type: "fix", val: 30, amount: "¥30", cond: "满 199 可用", min: 199 },
+  { code: "SAVE50", title: "满减狂欢券", desc: "满 299 立减 50", type: "fix", val: 50, amount: "¥50", cond: "满 299 可用", min: 299 },
+  { code: "FREE5", title: "无门槛 5 元券", desc: "下单即减 · 全场通用", type: "fix", val: 5, amount: "¥5", cond: "无门槛", min: 0 },
+  { code: "PCT30", title: "限时 7 折券", desc: "指定专区 7 折优惠", type: "pct", val: 0.3, amount: "7 折", cond: "指定专区", min: 0 },
+]
 
 export const REVIEW_POOL = [
   { u: "小鹿同学", t: "东西很不错，物流也快，会回购！" },
