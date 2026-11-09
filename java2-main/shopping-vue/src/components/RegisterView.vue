@@ -3,7 +3,7 @@
     <div class="wrap">
       <div class="reg-hero">
         <div class="reg-panel">
-          <h2>注册云购商城</h2>
+          <h2>注册萧逸商城</h2>
           <p class="sub">创建账号，开启愉快购物之旅 🎁 新用户首单立减 ¥10</p>
 
           <form @submit.prevent="submit" novalidate>
@@ -67,7 +67,7 @@
 
         <div class="reg-side">
           <div class="emoji">🛍️</div>
-          <h3>加入云购</h3>
+          <h3>加入萧逸商城</h3>
           <ul>
             <li>✨ 千款好物，每日上新</li>
             <li>🚚 满 ¥99 包邮，闪电发货</li>
@@ -237,7 +237,7 @@ function toLogin() { go('login') }
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
 .reg-side{
-  background:linear-gradient(160deg,#4da3ff,#8cc8ff);
+  background:linear-gradient(160deg,#2b6cb8,#7fb3e8);
   color:#fff;padding:40px 28px;display:flex;flex-direction:column;justify-content:center;
 }
 .reg-side .emoji{font-size:52px;margin-bottom:12px}

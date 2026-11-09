@@ -13,7 +13,7 @@
       <!-- 优惠券列表 -->
       <div class="cp-grid">
         <div
-          v-for="c in COUPON_POOL"
+          v-for="c in couponPool"
           :key="c.code"
           class="cp-card"
           :class="{ got: hasGot(c.code) }"
@@ -61,13 +61,13 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { store, go, claimCoupon, loadMyCoupons, openAuth } from '../store.js'
-import { COUPON_POOL } from '../data.js'
 
+const couponPool = computed(() => store.couponPool)
 const hasGot = (code) => store.myCoupons.includes(code)
 const myCount = computed(() => store.myCoupons.length)
 const myCoupons = computed(() =>
   store.myCoupons
-    .map((code) => COUPON_POOL.find((c) => c.code === code))
+    .map((code) => store.couponPool.find((c) => c.code === code))
     .filter(Boolean)
 )
 
@@ -104,7 +104,7 @@ watch(
 .page{padding:24px 0 50px}
 .cp-hero{
   display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(120deg,#ff7e5f,#feb47b 55%,#ff9a9e);
+  background:linear-gradient(120deg,#2b6cb8,#4a90d9 55%,#5b9bd5);
   color:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
   padding:28px 32px;margin-bottom:24px;
 }
@@ -146,10 +146,10 @@ watch(
 .cp-empty{color:var(--muted);font-size:14px;padding:10px 0}
 .cp-mine-list{display:flex;flex-wrap:wrap;gap:10px}
 .cp-mine-chip{
-  background:linear-gradient(160deg,#fff6ec,#ffe9d6);color:#e07a2f;
-  border:1px solid #ffd9b0;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;
+  background:linear-gradient(160deg,#f0f6ff,#dfeaff);color:#2b6cb8;
+  border:1px solid #c3d7f0;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;
 }
-[data-theme="dark"] .cp-mine-chip{background:rgba(255,154,94,.12);color:#ffb37d;border-color:rgba(255,154,94,.3)}
+[data-theme="dark"] .cp-mine-chip{background:rgba(74,144,217,.15);color:#7fb3e8;border-color:rgba(74,144,217,.35)}
 .cp-back{display:inline-block}
 
 @media(max-width:640px){

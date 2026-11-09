@@ -1,6 +1,5 @@
 import { reactive, computed } from 'vue'
 import { PRODUCTS, COUPONS, COUPON_POOL, SHIP_FREE } from './data.js'
-
 // ---------- localStorage 封装 ----------
 const LS = {
   get(k, d) {
@@ -28,15 +27,22 @@ export const store = reactive({
   // 后台管理员登录态：{ username, nick, token, offline }
   admin: LS.get('shopAdmin', null),
 
-  cart: LS.get('shopCart', {}),
-  wish: LS.get('shopWish', []),
-  orders: LS.get('shopOrders', []),
-  addresses: LS.get('shopAddr', []),
+  // 优惠券池：领券中心/结账/后台优惠券管理共用。后台可增删改，改动持久化到本地，
+  // 覆盖 data.js 的默认 COUPON_POOL；后端未存券池，仅存「谁领了哪张券」。
+  couponPool: LS.get('shopCouponPool', null) || COUPON_POOL.map((c) => ({ ...c })),
+
+  // 用户相关的购物数据（购物车/收藏/订单/优惠券）改为「按用户隔离」：
+  // 未登录时为 0/空；登录后从「该用户的存储 key」加载，切换账户即切换对应数据。
+  // 初始值统一为空，真正的数据在登录成功后由 loadUserData() 注入。
+  cart: {},
+  wish: [],
+  orders: [],
+  addresses: [],
   user: LS.get('shopUser', null),
-  coupon: LS.get('shopCoupon', null),
+  coupon: null,
   // 用户已领取的优惠券 code 列表（领券中心领取后，结账时可用于抵扣）
-  myCoupons: LS.get('shopMyCoupons', []),
-  selAddr: LS.get('shopSelAddr', null),
+  myCoupons: [],
+  selAddr: null,
 
   detailId: null,
   detailQty: 1,
@@ -102,10 +108,10 @@ export const cartSub = computed(() =>
   )
 )
 
-// 根据当前选中的优惠券 code 解析券信息（优先查 COUPON_POOL，兼容旧的 COUPONS）
+// 根据当前选中的优惠券 code 解析券信息（从动态优惠券池 couponPool 查询，兼容旧 COUPONS）
 export function couponInfo(code) {
   if (!code) return null
-  const c = COUPON_POOL.find((x) => x.code === code)
+  const c = store.couponPool.find((x) => x.code === code)
   if (c) return c
   const old = COUPONS[code]
   if (old) return { code, type: old.type, val: old.val, amount: old.label, min: 0 }
@@ -123,17 +129,57 @@ export function shipFee(sub) {
   return sub === 0 ? 0 : sub >= SHIP_FREE ? 0 : 10
 }
 
+// 当前登录用户的唯一标识（未登录为 null）；用于用户数据的存储隔离
+function userKey() {
+  return store.user ? (store.user.email || store.user.nick || store.user.name) : null
+}
+
+// 带用户后缀的存储 key：已登录 -> shopCart_<uid>，未登录 -> shopCart_guest
+function ukey(base) {
+  const k = userKey()
+  return base + '_' + (k || 'guest')
+}
+
 function save() {
-  LS.set('shopCart', store.cart)
-  LS.set('shopWish', store.wish)
-  LS.set('shopOrders', store.orders)
-  LS.set('shopAddr', store.addresses)
+  // 用户相关数据：按当前用户隔离存储；未登录时写入 guest 命名空间（登录后不再使用）
+  LS.set(ukey('shopCart'), store.cart)
+  LS.set(ukey('shopWish'), store.wish)
+  LS.set(ukey('shopOrders'), store.orders)
+  LS.set(ukey('shopMyCoupons'), store.myCoupons)
+  LS.set(ukey('shopCoupon'), store.coupon)
+  LS.set(ukey('shopAddr'), store.addresses)
+  LS.set(ukey('shopSelAddr'), store.selAddr)
+  // 登录态、商品、优惠券池、后台等：全局
   LS.set('shopUser', store.user)
-  LS.set('shopSelAddr', store.selAddr)
   LS.set('shopProducts', store.products)
+  LS.set('shopCouponPool', store.couponPool)
   LS.set('shopAdmin', store.admin)
-  LS.set('shopMyCoupons', store.myCoupons)
-  LS.set('shopCoupon', store.coupon)
+}
+
+// 登录成功后：从「该用户」的存储 key 加载其购物车/收藏/订单/优惠券，并同步后端优惠券
+function loadUserData() {
+  const uk = userKey()
+  if (!uk) { clearUserData(); return }
+  store.cart = LS.get('shopCart_' + uk, {})
+  store.wish = LS.get('shopWish_' + uk, [])
+  store.orders = LS.get('shopOrders_' + uk, [])
+  store.myCoupons = LS.get('shopMyCoupons_' + uk, [])
+  store.coupon = LS.get('shopCoupon_' + uk, null)
+  store.addresses = LS.get('shopAddr_' + uk, [])
+  store.selAddr = LS.get('shopSelAddr_' + uk, null)
+  // 异步同步后端优惠券列表（后端不可用则保持本地值）
+  loadMyCoupons()
+}
+
+// 登出 / 未登录时：清空用户购物数据，图标数字归零
+function clearUserData() {
+  store.cart = {}
+  store.wish = []
+  store.orders = []
+  store.myCoupons = []
+  store.coupon = null
+  store.addresses = []
+  store.selAddr = null
 }
 
 // ---------- Toast ----------
@@ -270,7 +316,7 @@ export async function claimCoupon(code) {
     const res = await r.json()
     if (res.code === 200) {
       store.myCoupons.push(code)
-      LS.set('shopMyCoupons', store.myCoupons)
+      save()
       toast('🎉 领取成功，已放入「我的优惠券」')
       return true
     }
@@ -281,7 +327,7 @@ export async function claimCoupon(code) {
   } catch (e) {
     // 后端未启动 → 回退本地领取
     store.myCoupons.push(code)
-    LS.set('shopMyCoupons', store.myCoupons)
+    save()
     toast('🎉 领取成功（离线模式）')
     return true
   }
@@ -296,7 +342,7 @@ export async function loadMyCoupons() {
     const res = await r.json()
     if (res.code === 200 && Array.isArray(res.data)) {
       store.myCoupons = res.data
-      LS.set('shopMyCoupons', store.myCoupons)
+      save()
     }
   } catch (e) {
     // 后端未启动，沿用本地已领记录
@@ -405,6 +451,7 @@ export async function submitAuth(name, pwd) {
         email: res.data.email || nickToEmail(nick),
         permission: permOf(res.data),
       }
+      loadUserData()
       save()
       return { ok: true, msg: '登录成功' }
     }
@@ -422,6 +469,7 @@ export async function submitAuth(name, pwd) {
       email: u.email || nickToEmail(u.nick),
       permission: permOf(u),
     }
+    loadUserData()
     save()
     return { ok: true, msg: '登录成功' }
   }
@@ -503,6 +551,7 @@ export function payOrder(no) {
 export function logout() {
   store.user = null
   adminLogout()   // 同步清掉后台登录态，避免退出后仍残留管理员入口
+  clearUserData() // 清空购物车/收藏/订单/优惠券，图标数字归零
   save()
   toast('已退出登录')
 }
@@ -694,6 +743,123 @@ export function adminLogout() {
   save()
 }
 
+// ==================== 后台优惠券管理 ====================
+// 优惠券池（store.couponPool）由后台增删改，持久化在本地；后端未存券池，
+// 只存「谁领了哪张券」（user_coupon 表）。后台「发放」= 给某用户写一条已领取记录。
+
+/** 校验券字段，返回错误文案或空串 */
+function couponValidate(c) {
+  const code = (c.code || '').trim().toUpperCase()
+  if (!code) return '券码（code）不能为空'
+  if (!/^[A-Z0-9_]+$/.test(code)) return '券码只能由字母、数字、下划线组成'
+  if (!c.title || !c.title.trim()) return '券名称不能为空'
+  if (c.type !== 'pct' && c.type !== 'fix') return '券类型需为「折扣」或「立减」'
+  const val = +c.val
+  if (isNaN(val) || val <= 0) return '面值/折扣需为大于 0 的数字'
+  if (c.type === 'pct' && (val > 1 || val < 0.01)) return '折扣需在 0.01 ~ 1 之间（如 0.8 表示 8 折）'
+  const min = c.min == null ? 0 : +c.min
+  if (isNaN(min) || min < 0) return '使用门槛需为不小于 0 的数字'
+  // 码重复校验（编辑时排除自身）
+  if (store.couponPool.some((x) => x.code === code && x !== c)) return '该券码已存在'
+  return ''
+}
+
+/** 新增或修改优惠券（有原始引用视为修改） */
+export function adminSaveCoupon(c, original) {
+  const code = (c.code || '').trim().toUpperCase()
+  const err = couponValidate({ ...c, code })
+  if (err) return { ok: false, msg: err }
+  const amount = c.type === 'pct' ? Math.round(+c.val * 10) + ' 折' : '¥' + c.val
+  const cond = (+(c.min || 0)) > 0 ? '满 ' + c.min + ' 可用' : '无门槛'
+  const norm = {
+    code,
+    title: (c.title || '').trim(),
+    desc: (c.desc || '').trim(),
+    type: c.type,
+    val: c.type === 'pct' ? +c.val : +c.val,
+    amount,
+    cond,
+    min: +(c.min || 0),
+  }
+  const i = store.couponPool.indexOf(original)
+  if (i > -1) store.couponPool[i] = norm
+  else store.couponPool.push(norm)
+  save()
+  return { ok: true, msg: original ? '优惠券已更新' : '优惠券已新增' }
+}
+
+/** 删除优惠券（从券池移除） */
+export function adminDeleteCoupon(c) {
+  store.couponPool = store.couponPool.filter((x) => x !== c)
+  save()
+  return { ok: true, msg: '优惠券已删除' }
+}
+
+/**
+ * 管理员发放优惠券给指定用户（email）。
+ * 优先走后端（POST /api/coupon/admin/grant，带 X-Admin-Token）；后端不可用则
+ * 直接写该用户本地的已领记录（离线模式）。
+ */
+export async function adminGrantCoupon(email, code) {
+  const e = (email || '').trim()
+  if (!e) return { ok: false, msg: '请填写用户邮箱' }
+  if (!couponInfo(code)) return { ok: false, msg: '该优惠券不存在' }
+  // 离线模式登录（token='offline'）时不请求后端，直接写本地
+  if (store.admin && store.admin.offline) {
+    return grantOffline(e, code)
+  }
+  try {
+    const res = await adminWrite('/api/coupon/admin/grant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: e, code }),
+    })
+    if (res.code === 200) return { ok: true, msg: '发放成功' }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效' } }
+    return { ok: false, msg: res.msg || '发放失败' }
+  } catch (err) {
+    // 后端不可用 → 离线：写入该用户本地的已领券列表
+    return grantOffline(e, code)
+  }
+}
+
+/** 离线发放：直接写入该用户本地的已领券记录 */
+function grantOffline(email, code) {
+  const key = 'shopMyCoupons_' + email
+  const list = LS.get(key, [])
+  if (list.includes(code)) return { ok: false, msg: '该用户已拥有这张券' }
+  list.push(code)
+  LS.set(key, list)
+  return { ok: true, msg: '发放成功（离线模式）' }
+}
+
+/** 管理员删除某个用户已领取的优惠券 */
+export async function adminRemoveUserCoupon(email, code) {
+  const e = (email || '').trim()
+  if (!e || !code) return { ok: false, msg: '参数缺失' }
+  // 离线模式登录时不请求后端，直接改本地
+  if (store.admin && store.admin.offline) return removeOffline(e, code)
+  try {
+    const res = await adminWrite(
+      '/api/coupon/admin/remove?email=' + encodeURIComponent(e) + '&code=' + encodeURIComponent(code),
+      { method: 'DELETE' }
+    )
+    if (res.code === 200) return { ok: true, msg: '已删除' }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效' } }
+    return { ok: false, msg: res.msg || '删除失败' }
+  } catch (err) {
+    return removeOffline(e, code)
+  }
+}
+
+/** 离线删除：直接改该用户本地的已领券记录 */
+function removeOffline(email, code) {
+  const key = 'shopMyCoupons_' + email
+  const list = LS.get(key, [])
+  LS.set(key, list.filter((x) => x !== code))
+  return { ok: true, msg: '已删除（离线模式）' }
+}
+
 /** 新增或修改商品（有 id 视为修改） */
 export async function adminSaveProduct(p) {
   const body = {
@@ -771,4 +937,11 @@ export async function adminDeleteProducts(ids) {
     save()
     return { ok: true, msg: '离线模式：已在本地删除' }
   }
+}
+
+// ---------- 启动初始化：恢复登录态对应的用户数据 ----------
+// 刷新页面时若 localStorage 里仍有登录态（shopUser），需要把该用户
+// 的购物车/收藏/订单/优惠券重新加载出来；未登录则保持空（图标归零）。
+if (store.user) {
+  loadUserData()
 }

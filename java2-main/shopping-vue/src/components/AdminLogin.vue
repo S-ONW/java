@@ -4,7 +4,7 @@
       <div class="brand">
         <div class="logo">⚙️</div>
         <h2>后台管理系统</h2>
-        <p class="sub">云购商城 · 商品数据管理后台</p>
+        <p class="sub">萧逸商城 · 商品数据管理后台</p>
       </div>
 
       <form @submit.prevent="submit" novalidate>
@@ -84,7 +84,7 @@ onMounted(() => {
 <style scoped>
 .admin-login{
   min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:linear-gradient(150deg,#4da3ff,#6a7bff 55%,#8b5cf6);
+  background:linear-gradient(150deg,#2b6cb8,#1f5090 55%,#163b6b);
 }
 .box{
   width:100%;max-width:400px;background:var(--card);border-radius:18px;
@@ -93,7 +93,7 @@ onMounted(() => {
 .brand{text-align:center;margin-bottom:26px}
 .brand .logo{
   width:56px;height:56px;line-height:56px;font-size:28px;margin:0 auto 12px;border-radius:16px;
-  background:linear-gradient(140deg,#4da3ff,#6a7bff);color:#fff;
+  background:linear-gradient(140deg,#2b6cb8,#1f5090);color:#fff;
 }
 .brand h2{font-size:22px;margin-bottom:6px}
 .brand .sub{font-size:13px;color:var(--muted)}
@@ -115,7 +115,7 @@ onMounted(() => {
 }
 .btn{
   width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;
-  background:linear-gradient(135deg,#4da3ff,#3a5cff);color:#fff;transition:.15s;
+  background:linear-gradient(135deg,#2b6cb8,#1f5090);color:#fff;transition:.15s;
 }
 .btn:hover{filter:brightness(1.05)}
 .btn:disabled{opacity:.6;cursor:not-allowed}

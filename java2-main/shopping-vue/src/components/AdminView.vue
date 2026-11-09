@@ -5,7 +5,7 @@
       <div class="brand">
         <span class="logo">⚙️</span>
         <div class="titles">
-          <h1>云购商城 · 后台管理系统</h1>
+          <h1>萧逸商城 · 后台管理系统</h1>
           <p>管理首页展示的商品数据，增删改会实时同步到商城首页</p>
         </div>
       </div>
@@ -19,6 +19,14 @@
     </header>
 
     <div class="wrap">
+      <!-- 管理标签页：商品管理 / 优惠券管理 -->
+      <div class="tabs">
+        <button class="tab" :class="{ on: tab === 'product' }" @click="tab = 'product'">📦 商品管理</button>
+        <button class="tab" :class="{ on: tab === 'coupon' }" @click="tab = 'coupon'">🎫 优惠券管理</button>
+      </div>
+
+      <!-- ============ 商品管理 ============ -->
+      <template v-if="tab === 'product'">
       <!-- 数据概览 -->
       <section class="stats">
         <div class="stat"><em>{{ stats.total }}</em><span>商品总数</span></div>
@@ -83,6 +91,65 @@
           </tbody>
         </table>
       </section>
+      </template>
+
+      <!-- ============ 优惠券管理 ============ -->
+      <template v-else>
+        <!-- 优惠券概览 -->
+        <section class="stats">
+          <div class="stat"><em>{{ couponPool.length }}</em><span>优惠券总数</span></div>
+          <div class="stat"><em>{{ couponPool.filter(c => c.type === 'pct').length }}</em><span>折扣券</span></div>
+          <div class="stat"><em>{{ couponPool.filter(c => c.type === 'fix').length }}</em><span>立减券</span></div>
+          <div class="stat danger"><em>{{ couponPool.filter(c => c.min > 0).length }}</em><span>有门槛券</span></div>
+        </section>
+
+        <!-- 工具栏 -->
+        <section class="toolbar">
+          <button class="btn primary" @click="openCouponForm(null)">＋ 新增优惠券</button>
+        </section>
+
+        <!-- 优惠券列表 -->
+        <section class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>券码</th><th>名称</th><th>类型</th><th>面值</th><th>门槛</th><th>说明</th><th class="right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in couponPool" :key="c.code">
+                <td class="muted">{{ c.code }}</td>
+                <td class="name">{{ c.title }}<em>{{ c.desc }}</em></td>
+                <td>{{ c.type === 'pct' ? '折扣' : '立减' }}</td>
+                <td class="price">{{ c.amount }}</td>
+                <td>{{ c.cond }}</td>
+                <td class="muted">{{ c.desc || '—' }}</td>
+                <td class="right ops">
+                  <button class="btn sm" @click="openCouponForm(c)">编辑</button>
+                  <button class="btn sm danger" @click="removeCoupon(c)">删除</button>
+                </td>
+              </tr>
+              <tr v-if="!couponPool.length">
+                <td colspan="7" class="empty">暂无优惠券，点击「新增优惠券」添加</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- 发放优惠券 -->
+        <section class="panel" style="margin-top:16px">
+          <h3 style="font-size:16px;margin-bottom:12px">🎁 发放优惠券给用户</h3>
+          <div class="grant-row">
+            <input v-model="grantEmail" class="grant-input" placeholder="用户邮箱（如 xiaoyi@shop.local）" />
+            <select v-model="grantCode" class="grant-select">
+              <option value="" disabled>选择优惠券</option>
+              <option v-for="c in couponPool" :key="c.code" :value="c.code">{{ c.title }}（{{ c.code }}）</option>
+            </select>
+            <button class="btn primary" :disabled="granting || !grantEmail || !grantCode" @click="doGrant">{{ granting ? '发放中…' : '发放' }}</button>
+          </div>
+          <p class="grant-tip">发放后，该用户登录即可在「我的优惠券」中看到并使用；后端不可用时自动降级为离线发放（仅写入本地）。</p>
+        </section>
+      </template>
     </div>
 
     <!-- 新增 / 编辑弹窗 -->
@@ -147,13 +214,40 @@
         </div>
       </div>
     </div>
+
+    <!-- 新增 / 编辑优惠券弹窗 -->
+    <div class="mask" v-if="showCouponForm" @click.self="showCouponForm = false">
+      <div class="modal">
+        <h3>{{ couponEditing ? '编辑优惠券 · ' + couponEditing.code : '新增优惠券' }}</h3>
+        <div class="grid">
+          <label class="f" :class="{ err: couponErr.code }"><span>券码 code *</span><input v-model="couponDraft.code" placeholder="如 NEW50（字母数字下划线）" /><em v-if="couponErr.code">{{ couponErr.code }}</em></label>
+          <label class="f wide" :class="{ err: couponErr.title }"><span>券名称 *</span><input v-model="couponDraft.title" placeholder="如 满 299 减 50" /><em v-if="couponErr.title">{{ couponErr.title }}</em></label>
+          <label class="f"><span>类型 *</span>
+            <select v-model="couponDraft.type" class="sel">
+              <option value="fix">立减（固定金额）</option>
+              <option value="pct">折扣（按比例）</option>
+            </select>
+          </label>
+          <label class="f" :class="{ err: couponErr.val }"><span>{{ couponDraft.type === 'pct' ? '折扣比例 *（0.01~1，如 0.8=8折）' : '立减金额 *（元）' }}</span><input v-model="couponDraft.val" type="number" step="0.01" min="0" /><em v-if="couponErr.val">{{ couponErr.val }}</em></label>
+          <label class="f" :class="{ err: couponErr.min }"><span>使用门槛（元，0=无门槛）</span><input v-model="couponDraft.min" type="number" min="0" step="1" /><em v-if="couponErr.min">{{ couponErr.min }}</em></label>
+          <label class="f wide"><span>说明</span><input v-model="couponDraft.desc" placeholder="一句话描述，如 全场通用" /></label>
+        </div>
+        <p class="err" v-if="couponFormErr">{{ couponFormErr }}</p>
+        <div class="modal-ops">
+          <button class="btn" @click="showCouponForm = false">取消</button>
+          <button class="btn primary" @click="saveCoupon">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
-  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts, adminLogout, adminCheck, go, toast, isAdminUser,
+  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts,
+  adminSaveCoupon, adminDeleteCoupon, adminGrantCoupon,
+  adminLogout, adminCheck, go, toast, isAdminUser,
 } from '../store.js'
 
 const kw = ref('')
@@ -289,6 +383,77 @@ function logout() {
 }
 function back() { go('home') }
 
+// ============ 优惠券管理 ============
+const tab = ref('product')
+
+// 优惠券池（来自 store，后台增删改实时生效）
+const couponPool = computed(() => store.couponPool)
+
+// 新增/编辑优惠券
+const showCouponForm = ref(false)
+const couponEditing = ref(null)
+const couponFormErr = ref('')
+const couponErr = ref({})
+function blankCoupon() {
+  return { code: '', title: '', desc: '', type: 'fix', val: 10, min: 0 }
+}
+const couponDraft = reactive(blankCoupon())
+
+function openCouponForm(c) {
+  couponEditing.value = c
+  Object.assign(couponDraft, c ? { ...c } : blankCoupon())
+  couponFormErr.value = ''
+  couponErr.value = {}
+  showCouponForm.value = true
+}
+
+// 前端即时校验（与 store 里 couponValidate 一致，用于标红提示）
+const couponErrors = computed(() => {
+  const e = {}
+  const code = (couponDraft.code || '').trim().toUpperCase()
+  if (!code) e.code = '券码不能为空'
+  else if (!/^[A-Z0-9_]+$/.test(code)) e.code = '只能由字母、数字、下划线组成'
+  else if (store.couponPool.some((x) => x.code === code && x !== couponEditing.value)) e.code = '该券码已存在'
+  if (!couponDraft.title.trim()) e.title = '券名称不能为空'
+  const val = +couponDraft.val
+  if (isNaN(val) || val <= 0) e.val = '需为大于 0 的数字'
+  else if (couponDraft.type === 'pct' && (val > 1 || val < 0.01)) e.val = '折扣需在 0.01~1 之间'
+  const min = +couponDraft.min
+  if (isNaN(min) || min < 0) e.min = '需为不小于 0 的数字'
+  return e
+})
+
+function saveCoupon() {
+  couponErr.value = couponErrors.value
+  if (Object.keys(couponErr.value).length) { couponFormErr.value = '请先修正表单中标红的项'; return }
+  const res = adminSaveCoupon(couponDraft, couponEditing.value)
+  if (res.ok) {
+    toast(res.msg)
+    showCouponForm.value = false
+  } else {
+    couponFormErr.value = res.msg
+  }
+}
+
+function removeCoupon(c) {
+  if (!window.confirm(`确定删除优惠券「${c.title}」（${c.code}）？删除后领券中心将不再展示，已领取用户的券不受影响。`)) return
+  const res = adminDeleteCoupon(c)
+  toast(res.msg)
+}
+
+// 发放优惠券
+const grantEmail = ref('')
+const grantCode = ref('')
+const granting = ref(false)
+async function doGrant() {
+  if (!grantEmail.value.trim() || !grantCode.value) { toast('请填写用户邮箱并选择优惠券'); return }
+  granting.value = true
+  const res = await adminGrantCoupon(grantEmail.value.trim(), grantCode.value)
+  granting.value = false
+  toast(res.msg)
+  if (res.ok) { grantEmail.value = ''; grantCode.value = '' }
+}
+
 // 进入后台页时复核登录态：后端 token 为内存态，重启/过期后 localStorage 里仍是旧 token，
 // 若不复核就会“显示已登录却无法增删改”。校验失败则清空并跳回登录页重新获取 token。
 onMounted(async () => {
@@ -314,7 +479,7 @@ onMounted(async () => {
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand .logo {
   width: 40px; height: 40px; line-height: 40px; text-align: center; font-size: 20px;
-  border-radius: 12px; background: linear-gradient(140deg, #4da3ff, #6a7bff); color: #fff;
+  border-radius: 12px; background: linear-gradient(140deg, #2b6cb8, #1f5090); color: #fff;
 }
 .titles h1 { font-size: 17px; margin-bottom: 3px; }
 .titles p { font-size: 12px; color: var(--muted); }
@@ -328,6 +493,38 @@ onMounted(async () => {
 .chip.warn { color: var(--warn); border-color: var(--warn); }
 
 .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 22px 40px; }
+
+/* 管理标签页 */
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tabs .tab {
+  border: 1px solid var(--line); background: var(--card); color: var(--text);
+  padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 14px;
+  font-family: inherit; transition: .15s;
+}
+.tabs .tab:hover { border-color: var(--primary); }
+.tabs .tab.on {
+  background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600;
+}
+
+/* 发放优惠券 */
+.grant-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.grant-input {
+  flex: 1; min-width: 240px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 12px; background: var(--card); color: var(--text); outline: none;
+  font-family: inherit; font-size: 14px;
+}
+.grant-select {
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+  background: var(--card); color: var(--text); outline: none; font-family: inherit; font-size: 14px;
+  min-width: 200px;
+}
+.grant-input:focus, .grant-select:focus { border-color: var(--primary); }
+.grant-tip { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.sel {
+  border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px;
+  background: var(--bg); color: var(--text); outline: none; font-family: inherit; font-size: 14px;
+}
+.sel:focus { border-color: var(--primary); }
 
 /* 概览卡片 */
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }

@@ -3,15 +3,15 @@
 
  Source Server         : localhost_3306
  Source Server Type    : MySQL
- Source Server Version : 80039 (8.0.39)
+ Source Server Version : 80408 (8.4.8)
  Source Host           : localhost:3306
  Source Schema         : shop
 
  Target Server Type    : MySQL
- Target Server Version : 80039 (8.0.39)
+ Target Server Version : 80408 (8.4.8)
  File Encoding         : 65001
 
- Date: 09/11/2026 11:58:49
+ Date: 10/11/2026 01:07:00
 */
 
 SET NAMES utf8mb4;
@@ -35,12 +35,12 @@ CREATE TABLE `product`  (
   `tag` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '角标：热销/新品/折扣',
   `gallery` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '图集 emoji，英文逗号分隔',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of product
 -- ----------------------------
-INSERT INTO `product` VALUES (1, '无线降噪耳机', '主动降噪 · 30h 续航 · 通透模式', 398, 599, '数码', '🎧', 98, 4.8, 32, '热销', '🎧,🔇,🔋');
+INSERT INTO `product` VALUES (1, '无线降噪耳机', '主动降噪 · 30h 续航 · 通透模式', 399, 599, '数码', '🎧', 98, 4.8, 32, '热销', '🎧,🔇,🔋');
 INSERT INTO `product` VALUES (2, '机械键盘', 'RGB 背光 · 红轴手感 · 全键无冲', 259, 349, '数码', '⌨️', 85, 4.6, 18, '折扣', '⌨️,💡,🖱️');
 INSERT INTO `product` VALUES (3, '智能手表', '心率血氧 · 运动追踪 · 防水', 699, 899, '数码', '⌚', 90, 4.7, 9, '新品', '⌚,❤️,🏃');
 INSERT INTO `product` VALUES (4, '便携充电宝', '20000mAh · 22.5W 快充', 129, 199, '数码', '🔋', 76, 4.5, 50, '', '🔋,⚡,🔌');
@@ -58,6 +58,7 @@ INSERT INTO `product` VALUES (15, '蓝牙音箱', '360° 环绕 · IPX7 防水',
 INSERT INTO `product` VALUES (16, '真丝眼罩', '遮光助眠 · 亲肤透气', 45, 69, '家居', '😴', 55, 4.3, 48, '', '😴,🌙,🛌');
 INSERT INTO `product` VALUES (17, '精华护肤套装', '水乳精华三步曲 · 礼盒', 299, 429, '美妆', '🧖', 79, 4.8, 16, '新品', '🧖,✨,🎀');
 INSERT INTO `product` VALUES (18, '坚果能量包', '每日坚果 · 30 袋独立装', 99, 149, '食品', '🥜', 74, 4.5, 42, '折扣', '🥜,🥥,🍪');
+INSERT INTO `product` VALUES (20, 'QQ糖', '', 99, 129, '食品', '🍬', 60, 4.5, 20, '新品', '');
 
 -- ----------------------------
 -- Table structure for user
@@ -72,7 +73,7 @@ CREATE TABLE `user`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
@@ -81,6 +82,7 @@ INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', 1, '2026-
 INSERT INTO `user` VALUES (2, 'admin@shop.local', 'admin', 'admin123', 0, '2026-11-09 11:15:22');
 INSERT INTO `user` VALUES (3, 'dd@shop.local', 'dd', '123456', 1, '2026-11-09 11:43:14');
 INSERT INTO `user` VALUES (4, 'ww@shop.local', 'ww', '123456', 1, '2026-11-09 11:52:56');
+INSERT INTO `user` VALUES (5, 'aa@shop.local', 'aa', '123456', 1, '2026-11-10 00:32:27');
 
 -- ----------------------------
 -- Table structure for user_coupon
@@ -93,7 +95,7 @@ CREATE TABLE `user_coupon`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_coupon

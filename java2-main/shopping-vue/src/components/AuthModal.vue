@@ -2,7 +2,7 @@
   <div class="modal open" @click.self="closeModal">
     <div class="modal-box" style="max-width:400px">
       <div class="modal-head">
-        <h3>{{ store.authMode === 'login' ? '登录' : '注册' }}云购</h3>
+        <h3>{{ store.authMode === 'login' ? '登录' : '注册' }}萧逸</h3>
         <button class="close" @click="closeModal">✕</button>
       </div>
       <div class="modal-body">

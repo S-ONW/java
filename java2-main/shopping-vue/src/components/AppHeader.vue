@@ -2,7 +2,7 @@
   <header>
     <div class="nav">
       <div class="logo" @click="go('home')">
-        <img :src="logoUrl" alt="云购商城" class="logo-img" />
+        <img :src="logoUrl" alt="萧逸商城" class="logo-img" />
         <transition name="hint-pop">
           <span v-if="showHint" class="logo-hint">点我回到首页</span>
         </transition>
@@ -12,12 +12,12 @@
         <button @click="onSearch">搜索</button>
       </div>
       <button class="icon-btn" @click="onCoupon" title="我的优惠券">🎫 <span class="badge" v-show="store.myCoupons.length">{{ store.myCoupons.length }}</span></button>
-      <button class="icon-btn" @click="openWish" title="收藏夹">❤️ <span class="badge">{{ store.wish.length }}</span></button>
+      <button class="icon-btn" @click="openWish" title="收藏夹">❤️ <span class="badge" v-show="store.wish.length">{{ store.wish.length }}</span></button>
       <button class="icon-btn" @click="go('orders')" title="我的订单">📦 <span class="badge" v-show="store.orders.length">{{ store.orders.length }}</span></button>
       <button class="icon-btn" @click="toggleTheme" title="暗色模式">{{ store.theme === 'dark' ? '☀️' : '🌙' }}</button>
       <!-- 仅 permission = 0 的管理员可见后台管理系统入口；默认权限（1）完全隐藏 -->
       <button v-if="isAdminUser" class="icon-btn admin-entry" @click="onAdmin" title="后台管理系统">⚙️ 后台管理</button>
-      <button class="icon-btn" @click="openCart" title="购物车">🛒 <span class="badge">{{ cartCount }}</span></button>
+      <button class="icon-btn" @click="openCart" title="购物车">🛒 <span class="badge" v-show="cartCount">{{ cartCount }}</span></button>
       <div v-if="store.user" class="avatar" @click="openAccount" title="账户">{{ store.user.name[0].toUpperCase() }}</div>
       <div v-else class="auth-wrap" ref="authWrap">
         <button class="icon-btn auth-trigger" type="button" @click.stop="toggleAuthMenu">👤 登录 / 注册</button>

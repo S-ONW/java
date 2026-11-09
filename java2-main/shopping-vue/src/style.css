@@ -1,12 +1,14 @@
+/* ============ 萧逸主题 · 深蓝火焰星空系 ============ */
 :root{
-  --primary:#4da3ff; --primary-dark:#1f8fef; --bg:#f2f7fc; --card:#ffffff;
-  --text:#1f2430; --muted:#8a90a0; --line:#e3ecf5; --shadow:0 6px 24px rgba(30,80,140,.08);
-  --radius:16px; --star:#ffb400; --ok:#1ec98b; --header-bg:rgba(255,255,255,.92);
-  --blue:#3a5cff; --warn:#ff9f1a;
+  --primary:#2b6cb8; --primary-dark:#1f5090; --bg:#f0f5fb; --card:#ffffff;
+  --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2; --shadow:0 6px 24px rgba(30,60,110,.10);
+  --radius:16px; --star:#e8b84b; --ok:#2b6cb8; --header-bg:rgba(248,251,255,.94);
+  --blue:#4a90d9; --warn:#e8b84b;
+  --accent:#122033;
 }
 [data-theme="dark"]{
-  --bg:#15171c; --card:#1f222b; --text:#e9ebf0; --muted:#9aa0ad; --line:#2a2e38;
-  --shadow:0 6px 24px rgba(0,0,0,.4); --header-bg:rgba(28,30,36,.92);
+  --bg:#0e1520; --card:#16202e; --text:#e4ecf6; --muted:#8fa0b6; --line:#263449;
+  --shadow:0 6px 24px rgba(0,0,0,.55); --header-bg:rgba(14,21,32,.94);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;transition:background .25s,color .25s}
@@ -64,7 +66,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
   border:1px solid var(--line);
   padding:9px 18px;border-radius:999px;
   font-size:13.5px;font-weight:500;color:var(--text);
-  box-shadow:0 1px 3px rgba(30,80,140,.04);
+  box-shadow:0 1px 3px rgba(40,70,120,.06);
   transition:all .2s ease;cursor:pointer;
 }
 .cat-nav .cat .cat-ico{display:inline-flex;font-size:15px;line-height:1;transition:transform .25s ease}
@@ -72,14 +74,14 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
   background:var(--bg);
   border-color:var(--primary);
   color:var(--primary);
-  box-shadow:0 3px 10px rgba(77,163,255,.15);
+  box-shadow:0 3px 10px rgba(43,108,184,.18);
   transform:translateY(-2px);
 }
 .cat-nav .cat:hover .cat-ico{transform:scale(1.2) rotate(-8deg)}
 .cat-nav .cat.active{
   background:linear-gradient(135deg,var(--primary),var(--primary-dark));
   border-color:transparent;color:#fff;font-weight:600;
-  box-shadow:0 6px 16px rgba(77,163,255,.32);
+  box-shadow:0 6px 16px rgba(43,108,184,.30);
 }
 .cat-nav .cat.active .cat-ico{transform:scale(1.1)}
 
@@ -94,7 +96,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
 .card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:.2s;display:flex;flex-direction:column;position:relative}
 .card:hover{transform:translateY(-4px)}
-.card .thumb{height:150px;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,#fafbff,#f0f2f8);cursor:pointer}
+.card .thumb{height:150px;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,#f7faff,#eaf1fa);cursor:pointer}
 .tag-badge{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;color:#fff;z-index:2}
 .fav{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.85);border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center}
 .fav.on{color:var(--primary)}
@@ -147,7 +149,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .modal-body{padding:20px}
 .detail{display:flex;gap:20px;flex-wrap:wrap}
 .gallery{width:200px;flex-shrink:0}
-.gallery .big{height:200px;border-radius:14px;background:linear-gradient(135deg,#fafbff,#f0f2f8);display:flex;align-items:center;justify-content:center;font-size:96px}
+.gallery .big{height:200px;border-radius:14px;background:linear-gradient(135deg,#f7faff,#eaf1fa);display:flex;align-items:center;justify-content:center;font-size:96px}
 .gallery .thumbs{display:flex;gap:8px;margin-top:10px}
 .gallery .thumbs div{width:54px;height:54px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:2px solid transparent}
 .gallery .thumbs div.on{border-color:var(--primary)}
@@ -177,12 +179,12 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .field{margin-bottom:12px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
 .field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);color:var(--text);outline:none;font-family:inherit}
 .addr-card{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.addr-card.on{border-color:var(--primary);background:rgba(77,163,255,.08)}
+.addr-card.on{border-color:var(--primary);background:rgba(43,108,184,.10)}
 .addr-card .def{font-size:11px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px}
 .addr-card .ops{display:flex;gap:10px;font-size:12px;color:var(--muted)}
 .pay{display:flex;gap:10px;flex-wrap:wrap}
 .pay .opt{flex:1;min-width:120px;border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;text-align:center}
-.pay .opt.on{border-color:var(--primary);background:rgba(77,163,255,.08)}
+.pay .opt.on{border-color:var(--primary);background:rgba(43,108,184,.10)}
 .pay .opt .ic{font-size:26px}.pay .opt .nm{font-size:14px;margin-top:4px;font-weight:600}
 .sum-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}
 .sum-row.big{font-size:18px;font-weight:800;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
@@ -208,9 +210,9 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .order-card .oh{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:10px}
 .order-card .oi{font-size:14px;margin-bottom:6px}
 .status{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
-.st-待发货{background:#fff3e0;color:var(--warn)}
-.st-待收货{background:#e3f2ff;color:var(--blue)}
-.st-已完成{background:#e6f9f1;color:var(--ok)}
+.st-待发货{background:#fdf6e3;color:#c9981f}
+.st-待收货{background:#e7f0fb;color:var(--primary)}
+.st-已完成{background:#eaf3fc;color:var(--ok)}
 .st-已取消{background:var(--bg);color:var(--muted)}
 .order-card .acts{display:flex;gap:10px;margin-top:10px}
 

@@ -144,7 +144,7 @@ watch(
   cursor:pointer;transition:.15s;background:var(--card);
 }
 .cp-item:hover{border-color:var(--primary)}
-.cp-item.on{border-color:var(--primary);background:rgba(77,163,255,.08);box-shadow:0 0 0 2px rgba(77,163,255,.15)}
+.cp-item.on{border-color:var(--primary);background:rgba(43,108,184,.10);box-shadow:0 0 0 2px rgba(43,108,184,.18)}
 .cp-item.dis{opacity:.55;cursor:not-allowed}
 .cp-item-amount{
   min-width:64px;text-align:center;font-size:18px;font-weight:800;color:var(--primary);

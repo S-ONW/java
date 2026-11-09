@@ -94,7 +94,7 @@ function onPick(c) {
   cursor:pointer;transition:.15s;background:var(--card);font-size:13px;
 }
 .cp-item:hover{border-color:var(--primary)}
-.cp-item.on{border-color:var(--primary);background:rgba(77,163,255,.08)}
+.cp-item.on{border-color:var(--primary);background:rgba(43,108,184,.10)}
 .cp-item.dis{opacity:.55;cursor:not-allowed}
 .cp-amount{font-weight:800;color:var(--primary);background:var(--bg);border-radius:8px;padding:4px 8px;flex-shrink:0}
 .cp-title{flex:1;min-width:0;font-weight:600}

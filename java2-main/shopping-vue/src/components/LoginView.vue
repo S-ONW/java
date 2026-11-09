@@ -3,7 +3,7 @@
     <div class="wrap">
       <div class="reg-hero">
         <div class="reg-panel">
-          <h2>登录云购商城</h2>
+          <h2>登录萧逸商城</h2>
           <p class="sub">欢迎回来，请使用已注册的账号登录 👋</p>
 
           <form @submit.prevent="submit" novalidate>
@@ -116,7 +116,7 @@ async function submit() {
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
 .reg-side{
-  background:linear-gradient(160deg,#4da3ff,#8cc8ff);
+  background:linear-gradient(160deg,#2b6cb8,#7fb3e8);
   color:#fff;padding:40px 28px;display:flex;flex-direction:column;justify-content:center;
 }
 .reg-side .emoji{font-size:52px;margin-bottom:12px}

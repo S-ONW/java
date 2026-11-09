@@ -1,8 +1,8 @@
 // 商品/广告/优惠等静态数据，从原 shopping.html 抽取而来
 export const BANNERS = [
-  { bg: "linear-gradient(120deg,#7cc4ff,#4da3ff 60%,#3a7bd5)", h: "全场低至 5 折 🎉", p: "精选好物 · 极速发货 · 七天无理由退换", t: "新人专享 · 满 99 包邮", d: "🛍️", link: "coupon" },
-  { bg: "linear-gradient(120deg,#5b8cff,#3a5cff)", h: "数码焕新季 ⚡", p: "耳机 / 键盘 / 手表 限时直降", t: "晒单返现 · 最高返 50", d: "🎧", link: "cat:数码" },
-  { bg: "linear-gradient(120deg,#1ec98b,#0fa972)", h: "健康生活节 🌿", p: "瑜伽 / 运动 / 个护 满 199 减 30", t: "会员双倍积分", d: "🧘", link: "cat:运动" },
+  { bg: "linear-gradient(120deg,#5b9bd5,#2b6cb8 60%,#163b6b)", h: "全场低至 5 折 🎉", p: "精选好物 · 极速发货 · 七天无理由退换", t: "新人专享 · 满 99 包邮", d: "🛍️", link: "coupon" },
+  { bg: "linear-gradient(120deg,#4a90d9,#1f5090)", h: "数码焕新季 ⚡", p: "耳机 / 键盘 / 手表 限时直降", t: "晒单返现 · 最高返 50", d: "🎧", link: "cat:数码" },
+  { bg: "linear-gradient(120deg,#e8b84b,#c9981f)", h: "健康生活节 🌿", p: "瑜伽 / 运动 / 个护 满 199 减 30", t: "会员双倍积分", d: "🧘", link: "cat:运动" },
 ]
 
 export const PRODUCTS = [

@@ -3,26 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>注册 - 云购商城</title>
+<title>注册 - 萧逸商城</title>
 <style>
 :root{
-  --primary:#4da3ff; --primary-dark:#1f8fef; --bg:#f2f7fc; --card:#ffffff;
-  --text:#1f2430; --muted:#8a90a0; --line:#ececf0;
-  --shadow:0 6px 24px rgba(20,20,40,.08); --radius:16px;
-  --ok:#1ec98b; --warn:#ff9f1a;
+  --primary:#2b6cb8; --primary-dark:#1f5090; --bg:#f0f5fb; --card:#ffffff;
+  --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2;
+  --shadow:0 6px 24px rgba(30,60,110,.12); --radius:16px;
+  --ok:#2b6cb8; --warn:#e8b84b;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
   min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#e8f3ff 0%,#f2f7fc 45%,#eef2ff 100%);
+  background:linear-gradient(135deg,#dbe7f6 0%,#f0f5fb 45%,#e3edf8 100%);
   color:var(--text);padding:20px;line-height:1.5;
 }
 /* 背景装饰气泡 */
 .bubble{position:fixed;border-radius:50%;filter:blur(2px);opacity:.5;pointer-events:none;animation:float 9s ease-in-out infinite}
-.b1{width:180px;height:180px;background:radial-gradient(circle,#d6ecff,#b3d9ff);top:-50px;left:-40px}
-.b2{width:240px;height:240px;background:radial-gradient(circle,#dbe4ff,#c7d4ff);bottom:-80px;right:-60px;animation-delay:-4s}
-.b3{width:90px;height:90px;background:radial-gradient(circle,#e0f2ff,#c2e2ff);top:16%;right:12%;animation-delay:-2s}
+.b1{width:180px;height:180px;background:radial-gradient(circle,#d6e5f8,#b8cfe8);top:-50px;left:-40px}
+.b2{width:240px;height:240px;background:radial-gradient(circle,#e3edf8,#c9d8ec);bottom:-80px;right:-60px;animation-delay:-4s}
+.b3{width:90px;height:90px;background:radial-gradient(circle,#dcebfa,#c2d8f0);top:16%;right:12%;animation-delay:-2s}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
 
 .card{
@@ -47,7 +47,7 @@ h1{font-size:22px;margin:14px 0 4px}
   width:100%;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;
   font-size:14px;color:var(--text);outline:none;transition:border-color .15s, box-shadow .15s;background:#fafafb;
 }
-.field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(77,163,255,.14);background:#fff}
+.field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(43,108,184,.16);background:#fff}
 .field.err input{border-color:var(--primary)}
 .tip{font-size:12px;color:var(--primary);margin-top:5px;min-height:0}
 .tip.ok{color:var(--ok)}
@@ -79,11 +79,11 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 
 .btn{
   width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;
-  background:linear-gradient(135deg,var(--primary),#8cc8ff);color:#fff;
+  background:linear-gradient(135deg,var(--primary),#7fb3e8);color:#fff;
   font-size:16px;font-weight:700;cursor:pointer;transition:.2s;
-  box-shadow:0 6px 16px rgba(77,163,255,.32);
+  box-shadow:0 6px 16px rgba(43,108,184,.30);
 }
-.btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(77,163,255,.4)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(43,108,184,.38)}
 .btn:active{transform:translateY(0)}
 .btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 
@@ -92,7 +92,7 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 
 /* ---- 右侧宣传栏 ---- */
 .side{
-  background:linear-gradient(160deg,#4da3ff 0%,#8cc8ff 100%);
+  background:linear-gradient(160deg,#2b6cb8 0%,#7fb3e8 100%);
   color:#fff;padding:42px 30px;display:flex;flex-direction:column;justify-content:center;gap:6px;
 }
 .side .emoji{font-size:54px;margin-bottom:8px;animation:float 6s ease-in-out infinite}
@@ -129,7 +129,7 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 
 <div class="card" id="card">
   <div class="form-side">
-    <a class="brand" href="index.html" style="text-decoration:none"><span class="logo">云购</span><span>商城</span></a>
+    <a class="brand" href="index.html" style="text-decoration:none"><span class="logo">萧逸</span><span>商城</span></a>
 
     <h1>创建新账号</h1>
     <p class="sub">注册即享新人专属礼包 🎁</p>
@@ -191,8 +191,8 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
   </div>
 
   <div class="side">
-    <div class="emoji">🛍️</div>
-    <h3>加入云购</h3>
+    <div class="emoji">💙</div>
+    <h3>加入萧逸商城</h3>
     <ul>
       <li>✨ 千款好物，每日上新</li>
       <li>🚚 满 ¥99 包邮，闪电发货</li>

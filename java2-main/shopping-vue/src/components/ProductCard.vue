@@ -26,9 +26,9 @@ const props = defineProps({ product: { type: Object, required: true } })
 
 const tagColor = computed(() => {
   const t = props.product.tag
-  if (t === '折扣') return '#4da3ff'
-  if (t === '新品') return '#3a5cff'
-  return '#1ec98b'
+  if (t === '折扣') return '#e8b84b'
+  if (t === '新品') return '#2b6cb8'
+  return '#1f5090'
 })
 const stockText = computed(() => {
   const s = props.product.stock

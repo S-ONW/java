@@ -71,6 +71,29 @@ public class CouponService {
         return codes;
     }
 
+    /**
+     * 管理员发放优惠券：直接给某个用户写入一条已领取记录（重复发放拦截）。
+     * 与普通领券区别：走后台 token 鉴权，不要求「用户本人已登录」。
+     */
+    public UserCoupon grant(String userEmail, String couponCode) {
+        return claim(userEmail, couponCode);
+    }
+
+    /**
+     * 管理员删除某个用户的某张优惠券（回收）。
+     * @return 是否真的删除了记录
+     */
+    public boolean remove(String userEmail, String couponCode) {
+        if (userEmail == null || userEmail.isBlank() || couponCode == null || couponCode.isBlank()) {
+            return false;
+        }
+        int rows = userCouponMapper.delete(
+                new LambdaQueryWrapper<UserCoupon>()
+                        .eq(UserCoupon::getUserEmail, userEmail)
+                        .eq(UserCoupon::getCouponCode, couponCode));
+        return rows > 0;
+    }
+
     /** 业务异常 */
     public static class BusinessException extends RuntimeException {
         public BusinessException(String msg) { super(msg); }
