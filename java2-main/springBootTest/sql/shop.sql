@@ -11,12 +11,8 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 06/11/2026 16:26:05
+ Date: 09/11/2026 11:58:49
 */
-
--- 建库（若库不存在则创建），确保空数据库下也能独立执行
-CREATE DATABASE IF NOT EXISTS `shop` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `shop`;
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -72,23 +68,19 @@ CREATE TABLE `user`  (
   `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '邮箱（登录账号）',
   `nick` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '昵称（展示名称）',
   `password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码（明文存储，不加密）',
-  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   `permission` tinyint NOT NULL DEFAULT 1 COMMENT '权限：1=默认权限，0=管理员权限',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', '2026-10-26 11:35:33', 1);
-INSERT INTO `user` VALUES (3, 'rr@shop.local', 'rr', '123456', '2026-10-26 11:46:34', 1);
-INSERT INTO `user` VALUES (4, 'dd@shop.local', 'dd', '123456', '2026-10-26 11:47:15', 1);
-INSERT INTO `user` VALUES (5, 'cc@shop.local', 'cc', '123456', '2026-10-28 09:03:40', 1);
-INSERT INTO `user` VALUES (6, 'ww@shop.local', 'ww', '123456', '2026-11-02 11:32:06', 1);
-INSERT INTO `user` VALUES (7, 'admin@shop.local', 'admin', 'admin123', '2026-11-06 15:45:38', 0);
-INSERT INTO `user` VALUES (9, 'hhh@shop.local', 'hhh', '123456', '2026-11-06 16:04:32', 1);
-INSERT INTO `user` VALUES (10, 'ad@shop.local', 'ad', '123456', '2026-11-06 16:23:53', 1);
+INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', 1, '2026-11-09 11:15:22');
+INSERT INTO `user` VALUES (2, 'admin@shop.local', 'admin', 'admin123', 0, '2026-11-09 11:15:22');
+INSERT INTO `user` VALUES (3, 'dd@shop.local', 'dd', '123456', 1, '2026-11-09 11:43:14');
+INSERT INTO `user` VALUES (4, 'ww@shop.local', 'ww', '123456', 1, '2026-11-09 11:52:56');
 
 -- ----------------------------
 -- Table structure for user_coupon
@@ -96,15 +88,17 @@ INSERT INTO `user` VALUES (10, 'ad@shop.local', 'ad', '123456', '2026-11-06 16:2
 DROP TABLE IF EXISTS `user_coupon`;
 CREATE TABLE `user_coupon`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `user_email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户邮箱（关联 user.email，登录账号）',
-  `coupon_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '优惠券 code（对应前端 COUPON_POOL）',
+  `user_email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户邮箱（关联 user.email）',
+  `coupon_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '优惠券 code',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_coupon
 -- ----------------------------
+INSERT INTO `user_coupon` VALUES (2, 'dd@shop.local', 'SAVE20', '2026-11-09 11:52:07');
+INSERT INTO `user_coupon` VALUES (3, 'ww@shop.local', 'VIP30', '2026-11-09 11:53:04');
 
 SET FOREIGN_KEY_CHECKS = 1;
