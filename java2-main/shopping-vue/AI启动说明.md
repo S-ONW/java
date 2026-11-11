@@ -55,6 +55,56 @@ npm run dev
   表现为看不到后台按钮，重新登录一次即可**。
 - 改动前端后依旧必须 `npm run build` 并把 dist 同步到 `src/main/resources/static` 与 `target/classes/static` 两处。
 
+## 优惠券约定（2026-11-11 起）
+
+- 优惠券池已**从「前端写死」改为「数据库 coupon 表」**：`coupon` 表存券池（code / title / descp / type / val / min_amount），
+  `user_coupon` 表仍只存「谁领了哪张券」（user_email + coupon_code，唯一约束防重复领取）。
+- 建表 + 种子数据在 `db/schema.sql`（`CREATE TABLE IF NOT EXISTS coupon`）与 `db/data.sql`（`INSERT IGNORE` 6 张券），
+  应用启动自动执行；另外 `sql/shop.sql` 里也有完整的 DROP/CREATE/INSERT dump。
+  `db/schema.sql` 空库/已有库都能直接跑：券池建表放在 user 升级段之前，user 相关的 UPDATE/INSERT 都用
+  `PREPARE/EXECUTE` + `@user_tbl_exists` 守卫，空库不会中途报错中断。
+- `type = pct` 时 **val 是「减免比例」**：`0.2` = 减 20% = **8 折**（结算按 `小计 × val` 抵扣）；
+  `type = fix` 时 val 是立减金额。`min_amount` = 使用门槛（订单小计 ≥ 该值才可用，0 = 无门槛）。
+  前端 `amount`（如「8 折」「¥30」）与 `cond`（如「满 199 可用」）都是按 type/val/min 推导出来的展示文案，不入库。
+- 接口：`GET /api/coupon/pool`（公开，券池）、`POST /api/coupon/claim`、`GET /api/coupon/list?email=`；
+  后台 `POST /api/coupon/admin/save`、`DELETE /api/coupon/admin/delete?code=`、`GET /api/coupon/admin/stats`（每张券领取人数）、
+  `POST /api/coupon/admin/grant`、`DELETE /api/coupon/admin/remove?email=&code=`（后台接口都要 `X-Admin-Token`）。
+- 前端：`store.couponPool` 是唯一数据源（领券中心 / 结算抵扣 / 后台优惠券管理共用），
+  启动时 `loadCouponPool()` 从 `/api/coupon/pool` 同步；后端不可用时回退 `data.js` 的 `COUPON_POOL`
+  与 localStorage（离线模式仍可增删改券，但只存在浏览器本地）。
+- 兑换/抵扣逻辑不变：`couponDisc(小计, code)`，门槛不满足返回 0。
+
+## 品牌名（2026-11-11 起：逸如反掌商城）
+
+- 品牌名唯一数据源是 `src/brand.js`：`BRAND = '逸如反掌'`，`SHOP_NAME = BRAND + '商城'`。
+  头部 alt、页脚标题与版权、登录页 / 注册页 / 注册弹窗、后台登录页与后台标题全部读这两个常量，**改名只改这一行**。
+- 例外（静态 HTML，不经过 Vue，需手动同步）：`index.html` 与 `register.html` 的 `<title>`，
+  以及 `register.html` 里 `.brand` 的 `<span class="logo">`。
+  改完必须 `vite build` 再同步 dist 到 `springBootTest/{src/main/resources,target/classes}/static`，
+  否则页面上是新的、浏览器标签页还是旧的。
+- 历史名：云购商城 → 萧逸商城 → 逸如反掌商城（旧的「云购 / ShopCloud」只出现在历史记忆与 git 历史里，代码已无残留）。
+- Logo 是 `src/assets/logo.jpg` 图片（卡通头像，不含文字），改名不需要动它。
+
+## 吉祥物表情包（2026-11-11 起）
+
+来源是一张 5 连拍小头像图（522×138，白底），已按比例切成 5 张透明 PNG，放在
+`src/assets/mascot/`，画布统一 158×158（79×79 的 2 倍，给高分屏），字符底部对齐：
+
+| 文件 | 表情 | 用在哪 |
+|---|---|---|
+| `calm.png` | 平静 / 等待 | 购物车空、订单抽屉空、订单页空、结算页空车 |
+| `dizzy.png` | 圈圈眼 / 找不到 | 首页搜索/筛选无结果 |
+| `happy.png` | 闭眼微笑 | 收藏夹空、登录页侧栏 |
+| `wow.png` | 睁大眼惊讶 | 注册页侧栏 |
+| `laugh.png` | 眯眼大笑 | 下单成功弹窗（替代原来的 ✅） |
+
+- 全局样式在 `src/style.css` 的 `.mascot`：默认 88px、`.sm` 68px（抽屉里用）、`.lg` 108px（弹窗/侧栏用）。
+- 暗色主题下深色头发贴深色卡片会糊，`[data-theme="dark"] .mascot` 加了一层很淡的冷光晕 + 外发光，
+  这是有意为之，别当冗余样式删掉。
+- 换素材时**必须保留透明通道和统一画布**，否则一排小人在不同页面大小/基线会不一致。
+  抠图不能按「离白色多远」算 alpha（浅色皮肤会被当成半透明，放到深色底上整张脸发黑）：
+  正确做法是从四边洪水填充出外部背景，只在边界一圈做去白反解。
+
 ## 已知小毛病（不影响启动）
 
 - `application.properties` 引用的 `test`、`book.bookid` 配置不存在，仅影响 `/user/test` 演示接口显示 null

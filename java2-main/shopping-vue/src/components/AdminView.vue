@@ -5,7 +5,7 @@
       <div class="brand">
         <span class="logo">⚙️</span>
         <div class="titles">
-          <h1>萧逸商城 · 后台管理系统</h1>
+          <h1>{{ SHOP_NAME }} · 后台管理系统</h1>
           <p>管理首页展示的商品数据，增删改会实时同步到商城首页</p>
         </div>
       </div>
@@ -100,7 +100,8 @@
           <div class="stat"><em>{{ couponPool.length }}</em><span>优惠券总数</span></div>
           <div class="stat"><em>{{ couponPool.filter(c => c.type === 'pct').length }}</em><span>折扣券</span></div>
           <div class="stat"><em>{{ couponPool.filter(c => c.type === 'fix').length }}</em><span>立减券</span></div>
-          <div class="stat danger"><em>{{ couponPool.filter(c => c.min > 0).length }}</em><span>有门槛券</span></div>
+          <div class="stat"><em>{{ couponPool.filter(c => c.min > 0).length }}</em><span>有门槛券</span></div>
+          <div class="stat"><em>{{ totalClaimed }}</em><span>已领取次数</span></div>
         </section>
 
         <!-- 工具栏 -->
@@ -113,7 +114,7 @@
           <table>
             <thead>
               <tr>
-                <th>券码</th><th>名称</th><th>类型</th><th>面值</th><th>门槛</th><th>说明</th><th class="right">操作</th>
+                <th>券码</th><th>名称</th><th>类型</th><th>面值</th><th>门槛</th><th>已领取</th><th class="right">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -123,7 +124,7 @@
                 <td>{{ c.type === 'pct' ? '折扣' : '立减' }}</td>
                 <td class="price">{{ c.amount }}</td>
                 <td>{{ c.cond }}</td>
-                <td class="muted">{{ c.desc || '—' }}</td>
+                <td class="muted">{{ statsOf(c.code) }} 人</td>
                 <td class="right ops">
                   <button class="btn sm" @click="openCouponForm(c)">编辑</button>
                   <button class="btn sm danger" @click="removeCoupon(c)">删除</button>
@@ -148,6 +149,17 @@
             <button class="btn primary" :disabled="granting || !grantEmail || !grantCode" @click="doGrant">{{ granting ? '发放中…' : '发放' }}</button>
           </div>
           <p class="grant-tip">发放后，该用户登录即可在「我的优惠券」中看到并使用；后端不可用时自动降级为离线发放（仅写入本地）。</p>
+
+          <h3 style="font-size:16px;margin:18px 0 12px">♻️ 回收用户已领取的券</h3>
+          <div class="grant-row">
+            <input v-model="revokeEmail" class="grant-input" placeholder="用户邮箱（如 xiaoyi@shop.local）" />
+            <select v-model="revokeCode" class="grant-select">
+              <option value="" disabled>选择优惠券</option>
+              <option v-for="c in couponPool" :key="c.code" :value="c.code">{{ c.title }}（{{ c.code }}）</option>
+            </select>
+            <button class="btn danger" :disabled="revoking || !revokeEmail || !revokeCode" @click="doRevoke">{{ revoking ? '回收中…' : '回收' }}</button>
+          </div>
+          <p class="grant-tip">只会删掉该用户名下的这张券（user_coupon 记录），券本身仍留在券池里给别人领。</p>
         </section>
       </template>
     </div>
@@ -228,7 +240,7 @@
               <option value="pct">折扣（按比例）</option>
             </select>
           </label>
-          <label class="f" :class="{ err: couponErr.val }"><span>{{ couponDraft.type === 'pct' ? '折扣比例 *（0.01~1，如 0.8=8折）' : '立减金额 *（元）' }}</span><input v-model="couponDraft.val" type="number" step="0.01" min="0" /><em v-if="couponErr.val">{{ couponErr.val }}</em></label>
+          <label class="f" :class="{ err: couponErr.val }"><span>{{ couponDraft.type === 'pct' ? '减免比例 *（0.01~1，如 0.2 = 减 20% 即 8 折）' : '立减金额 *（元）' }}</span><input v-model="couponDraft.val" type="number" step="0.01" min="0" /><em v-if="couponErr.val">{{ couponErr.val }}</em></label>
           <label class="f" :class="{ err: couponErr.min }"><span>使用门槛（元，0=无门槛）</span><input v-model="couponDraft.min" type="number" min="0" step="1" /><em v-if="couponErr.min">{{ couponErr.min }}</em></label>
           <label class="f wide"><span>说明</span><input v-model="couponDraft.desc" placeholder="一句话描述，如 全场通用" /></label>
         </div>
@@ -245,10 +257,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
-  store, loadProducts, adminSaveProduct, adminDeleteProduct, adminDeleteProducts,
-  adminSaveCoupon, adminDeleteCoupon, adminGrantCoupon,
+  store, loadProducts, loadCouponPool, loadCouponStats, adminSaveProduct, adminDeleteProduct, adminDeleteProducts,
+  adminSaveCoupon, adminDeleteCoupon, adminGrantCoupon, adminRemoveUserCoupon,
   adminLogout, adminCheck, go, toast, isAdminUser,
 } from '../store.js'
+import { SHOP_NAME } from '../brand.js'
 
 const kw = ref('')
 const cat = ref('')
@@ -389,6 +402,12 @@ const tab = ref('product')
 // 优惠券池（来自 store，后台增删改实时生效）
 const couponPool = computed(() => store.couponPool)
 
+// 每张券的已领取人数：来自 user_coupon 表统计（store.couponStats，由 loadCouponStats 拉取）
+const statsOf = (code) => store.couponStats[code] || 0
+const totalClaimed = computed(() =>
+  Object.values(store.couponStats || {}).reduce((a, b) => a + (b || 0), 0)
+)
+
 // 新增/编辑优惠券
 const showCouponForm = ref(false)
 const couponEditing = ref(null)
@@ -423,10 +442,10 @@ const couponErrors = computed(() => {
   return e
 })
 
-function saveCoupon() {
+async function saveCoupon() {
   couponErr.value = couponErrors.value
   if (Object.keys(couponErr.value).length) { couponFormErr.value = '请先修正表单中标红的项'; return }
-  const res = adminSaveCoupon(couponDraft, couponEditing.value)
+  const res = await adminSaveCoupon(couponDraft, couponEditing.value)
   if (res.ok) {
     toast(res.msg)
     showCouponForm.value = false
@@ -435,9 +454,9 @@ function saveCoupon() {
   }
 }
 
-function removeCoupon(c) {
+async function removeCoupon(c) {
   if (!window.confirm(`确定删除优惠券「${c.title}」（${c.code}）？删除后领券中心将不再展示，已领取用户的券不受影响。`)) return
-  const res = adminDeleteCoupon(c)
+  const res = await adminDeleteCoupon(c)
   toast(res.msg)
 }
 
@@ -454,6 +473,19 @@ async function doGrant() {
   if (res.ok) { grantEmail.value = ''; grantCode.value = '' }
 }
 
+// 回收某用户已领取的券（删 user_coupon 记录，券仍在券池）
+const revokeEmail = ref('')
+const revokeCode = ref('')
+const revoking = ref(false)
+async function doRevoke() {
+  if (!revokeEmail.value.trim() || !revokeCode.value) { toast('请填写用户邮箱并选择优惠券'); return }
+  revoking.value = true
+  const res = await adminRemoveUserCoupon(revokeEmail.value.trim(), revokeCode.value)
+  revoking.value = false
+  toast(res.msg)
+  if (res.ok) { revokeEmail.value = ''; revokeCode.value = '' }
+}
+
 // 进入后台页时复核登录态：后端 token 为内存态，重启/过期后 localStorage 里仍是旧 token，
 // 若不复核就会“显示已登录却无法增删改”。校验失败则清空并跳回登录页重新获取 token。
 onMounted(async () => {
@@ -461,6 +493,8 @@ onMounted(async () => {
   if (!isAdminUser.value) { adminLogout(); go('home'); return }
   if (!store.admin) { go('adminLogin'); return }
   if (!store.admin.offline) {
+    // 进后台时同步一次券池（coupon 表），保证「优惠券管理」看到的就是数据库里的数据
+    loadCouponPool().then(loadCouponStats)
     const valid = await adminCheck()
     if (!valid) { adminLogout(); go('adminLogin'); return }
   }

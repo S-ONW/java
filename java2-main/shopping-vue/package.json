@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "云购商城 · ShopCloud — 由 shopping.html 改造而来的 Vue 3 单页项目",
+  "description": "逸如反掌商城 — 由 shopping.html 改造而来的 Vue 3 单页项目",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

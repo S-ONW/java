@@ -2,7 +2,7 @@
   <div class="modal open" @click.self="closeModal">
     <div class="modal-box" style="max-width:400px">
       <div class="modal-head">
-        <h3>{{ store.authMode === 'login' ? '登录' : '注册' }}萧逸</h3>
+        <h3>{{ store.authMode === 'login' ? '登录' : '注册' }}{{ BRAND }}</h3>
         <button class="close" @click="closeModal">✕</button>
       </div>
       <div class="modal-body">
@@ -24,6 +24,7 @@
 <script setup>
 import { ref } from 'vue'
 import { store, closeModal, switchAuth, submitAuth, openRegisterPage, toast } from '../store.js'
+import { BRAND } from '../brand.js'
 
 const name = ref('')
 const pwd = ref('')

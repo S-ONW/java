@@ -1,7 +1,10 @@
 <template>
   <div class="wrap page">
     <div class="section-title">确认订单 <span class="back" @click="go('home')">← 继续购物</span></div>
-    <div v-if="!ids.length" class="empty">购物车是空的，去逛逛吧 🛒</div>
+    <div v-if="!ids.length" class="empty">
+      <img class="mascot" :src="mascotCalm" alt="购物车是空的" />
+      购物车是空的，去逛逛吧 🛒
+    </div>
     <div class="ck" v-else>
       <div>
         <div class="panel">
@@ -98,6 +101,7 @@
 </template>
 
 <script setup>
+import mascotCalm from '../assets/mascot/calm.png'
 import { computed, watch, onMounted } from 'vue'
 import {
   store, pById, money, cartSub, couponDisc, couponInfo, shipFee,

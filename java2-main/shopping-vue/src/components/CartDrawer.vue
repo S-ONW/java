@@ -5,7 +5,10 @@
       <button class="close" @click="closeDrawer">✕</button>
     </header>
     <div class="items">
-      <div v-if="!ids.length" class="empty">购物车还是空的 🛒</div>
+      <div v-if="!ids.length" class="empty">
+        <img class="mascot sm" :src="mascotCalm" alt="购物车是空的" />
+        购物车还是空的 🛒
+      </div>
       <div v-for="id in ids" :key="id" class="item">
         <div class="ic">{{ pById(id).icon }}</div>
         <div class="info">
@@ -55,6 +58,7 @@
 </template>
 
 <script setup>
+import mascotCalm from '../assets/mascot/calm.png'
 import { computed, onMounted } from 'vue'
 import {
   store, pById, money, cartSub, couponDisc, couponInfo, shipFee,

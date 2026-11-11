@@ -2,8 +2,23 @@
   <div class="page">
     <div class="wrap">
       <div class="reg-hero">
+        <!-- 左侧雪景插画（登录 / 注册两页统一放左边） -->
+        <div class="reg-art" role="img" aria-label="冬日雪景插画">
+          <div class="art-copy">
+            <p class="art-eyebrow">加入{{ SHOP_NAME }}</p>
+            <h3>雪落无声<br />好物有信</h3>
+            <span class="art-rule"></span>
+            <ul>
+              <li>千款好物，每日上新</li>
+              <li>满 ¥99 包邮，闪电发货</li>
+              <li>新人专享优惠券礼包</li>
+              <li>七天无理由退换货</li>
+            </ul>
+          </div>
+        </div>
+
         <div class="reg-panel">
-          <h2>注册萧逸商城</h2>
+          <h2>注册{{ SHOP_NAME }}</h2>
           <p class="sub">创建账号，开启愉快购物之旅 🎁 新用户首单立减 ¥10</p>
 
           <form @submit.prevent="submit" novalidate>
@@ -64,17 +79,6 @@
             <a @click="toLogin">去登录</a>
           </p>
         </div>
-
-        <div class="reg-side">
-          <div class="emoji">🛍️</div>
-          <h3>加入萧逸商城</h3>
-          <ul>
-            <li>✨ 千款好物，每日上新</li>
-            <li>🚚 满 ¥99 包邮，闪电发货</li>
-            <li>🎫 新人专享优惠券礼包</li>
-            <li>🔄 七天无理由退换货</li>
-          </ul>
-        </div>
       </div>
     </div>
   </div>
@@ -83,6 +87,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { store, submitRegister, go, toast } from '../store.js'
+import { SHOP_NAME } from '../brand.js'
 
 const API = 'http://localhost:8081'
 
@@ -197,15 +202,20 @@ function toLogin() { go('login') }
 
 <style scoped>
 .reg-hero{
-  display:grid;grid-template-columns:1fr 300px;gap:0;
+  /* 标题/侧栏走宋体（清冷、留白、字距略宽），与雪景插画的气质对齐；表单控件仍用无衬线保证可读 */
+  --serif:"STSong","Songti SC","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
+  display:grid;grid-template-columns:340px 1fr;gap:0;
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
-  overflow:hidden;margin-top:12px;
+  overflow:hidden;max-width:1020px;margin:14px auto 0;
 }
 .reg-panel{padding:36px 40px}
-.reg-panel h2{font-size:24px;margin-bottom:6px}
-.reg-panel .sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+.reg-panel h2{
+  font-family:var(--serif);font-size:25px;font-weight:400;
+  letter-spacing:.1em;margin-bottom:9px;
+}
+.reg-panel .sub{font-size:13px;color:var(--muted);margin-bottom:24px;letter-spacing:.02em}
 .field{margin-bottom:14px}
-.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
 .field input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);color:var(--text);outline:none;font-family:inherit;transition:border-color .15s}
 .field input:focus{border-color:var(--primary)}
 .field.err input{border-color:var(--primary)}
@@ -232,21 +242,67 @@ function toLogin() { go('login') }
 .agree input{width:16px;height:16px;accent-color:var(--primary)}
 .agree a{color:var(--primary)}
 .agree.err{color:var(--primary)}
-.reg-btn{margin-top:10px;padding:12px;font-size:15px}
+.reg-btn{
+  margin-top:12px;padding:13px;font-size:15px;font-family:var(--serif);
+  letter-spacing:.28em;text-indent:.28em;
+}
 .reg-btn:disabled{opacity:.6;cursor:not-allowed}
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
-.reg-side{
-  background:linear-gradient(160deg,#2b6cb8,#7fb3e8);
-  color:#fff;padding:40px 28px;display:flex;flex-direction:column;justify-content:center;
+
+/* ---------- 左侧雪景插画栏 ---------- */
+.reg-art{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:580px;padding:34px 28px 30px;color:#fff;
+  background:#a9c8e6 url('../assets/register-hero.webp') center 10%/cover no-repeat;
 }
-.reg-side .emoji{font-size:52px;margin-bottom:12px}
-.reg-side h3{font-size:20px;margin-bottom:16px}
-.reg-side ul{list-style:none;display:flex;flex-direction:column;gap:12px;font-size:14px;opacity:.95}
+/* 右侧渐隐成卡片底色，和表单区无缝衔接（用 --card，深色主题下自动变暗） */
+.reg-art::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(270deg,var(--card) 0%,transparent 34%);
+}
+/* 底部压暗，保证白色文字在任何雪花噪点上都能读清 */
+.reg-art::after{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(to top,rgba(10,28,52,.90) 0%,rgba(10,28,52,.60) 32%,rgba(10,28,52,0) 64%);
+}
+.art-copy{position:relative;z-index:1}
+.art-eyebrow{
+  display:inline-block;font-family:var(--serif);font-size:11px;letter-spacing:.24em;
+  color:rgba(255,255,255,.94);
+  padding:5px 12px 5px 14px;border-radius:999px;
+  background:rgba(10,28,52,.42);border:1px solid rgba(255,255,255,.26);
+  backdrop-filter:blur(4px);
+  margin-bottom:14px;
+}
+.reg-art h3{
+  font-family:var(--serif);font-weight:400;font-size:27px;line-height:1.62;
+  letter-spacing:.15em;text-shadow:0 2px 14px rgba(4,16,34,.6);
+}
+.art-rule{
+  display:block;width:46px;height:1px;margin:17px 0 19px;
+  background:linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,0));
+}
+.reg-art ul{
+  list-style:none;display:flex;flex-direction:column;gap:11px;
+  font-family:var(--serif);font-size:13.5px;letter-spacing:.06em;
+  color:rgba(255,255,255,.9);
+}
+.reg-art li{display:flex;align-items:center;gap:10px}
+.reg-art li::before{
+  content:'';flex-shrink:0;width:4px;height:4px;border-radius:50%;
+  background:#fff;box-shadow:0 0 9px rgba(190,225,255,.95);
+}
 @media(max-width:860px){
   .reg-hero{grid-template-columns:1fr}
   .reg-panel{padding:26px 22px}
-  .reg-side{order:-1;padding:26px 22px}
-  .reg-side ul{flex-direction:row;flex-wrap:wrap;gap:8px 16px}
+  .reg-art{order:-1;min-height:0;height:250px;padding:18px 20px}
+  .reg-art::before{background:none}
+  .reg-art::after{background:linear-gradient(to top,rgba(8,22,42,.93) 0%,rgba(8,22,42,.66) 48%,rgba(8,22,42,.14) 100%)}
+  .art-eyebrow{margin-bottom:10px;font-size:10.5px;padding:4px 10px 4px 12px;letter-spacing:.2em}
+  .reg-art h3{font-size:20px;letter-spacing:.1em;line-height:1.46}
+  .art-rule{margin:9px 0 0;width:30px}
+  /* 窄屏只留标题，四条卖点收起来避免压住画面 */
+  .reg-art ul{display:none}
 }
 </style>

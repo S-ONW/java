@@ -5,7 +5,10 @@
       <button class="close" @click="closeDrawer">✕</button>
     </header>
     <div class="items">
-      <div v-if="!store.orders.length" class="empty">还没有订单，去逛逛吧 🛒</div>
+      <div v-if="!store.orders.length" class="empty">
+        <img class="mascot sm" :src="mascotCalm" alt="还没有订单" />
+        还没有订单，去逛逛吧 🛒
+      </div>
       <div v-for="o in orderList" :key="o.no" class="order-card">
         <div class="oh"><span>订单号 {{ o.no }}</span><span>{{ o.time }}</span></div>
         <div class="oi">{{ itemsText(o) }}</div>
@@ -19,6 +22,7 @@
 </template>
 
 <script setup>
+import mascotCalm from '../assets/mascot/calm.png'
 import { computed } from 'vue'
 import { store, pById, money, closeDrawer } from '../store.js'
 

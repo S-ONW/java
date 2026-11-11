@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { store, closeDrawer, loadProducts, isAdminUser, adminLogout, go } from './store.js'
+import { store, closeDrawer, loadProducts, loadCouponPool, isAdminUser, adminLogout, go } from './store.js'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import HomeView from './components/HomeView.vue'
@@ -110,6 +110,8 @@ onMounted(() => {
   document.documentElement.setAttribute('data-theme', theme)
   // 启动时尝试拉取后端商品数据：后台管理改过的数据会直接反映到首页
   loadProducts()
+  // 启动时同步后端优惠券池（coupon 表），领券中心/结算用券都以数据库为准
+  loadCouponPool()
   window.addEventListener('scroll', onScroll)
 })
 onUnmounted(() => window.removeEventListener('scroll', onScroll))

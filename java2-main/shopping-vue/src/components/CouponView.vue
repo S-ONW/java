@@ -60,7 +60,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { store, go, claimCoupon, loadMyCoupons, openAuth } from '../store.js'
+import { store, go, claimCoupon, loadMyCoupons, loadCouponPool, openAuth } from '../store.js'
 
 const couponPool = computed(() => store.couponPool)
 const hasGot = (code) => store.myCoupons.includes(code)
@@ -71,8 +71,11 @@ const myCoupons = computed(() =>
     .filter(Boolean)
 )
 
-// 进入领券中心时，从后端同步当前用户已领取的券（未登录则无需拉取）
-onMounted(() => { if (store.user) loadMyCoupons() })
+// 进入领券中心时，先从后端同步券池（coupon 表）+ 当前用户已领取的券（未登录则不拉已领）
+onMounted(() => {
+  loadCouponPool()
+  if (store.user) loadMyCoupons()
+})
 
 // 记录未登录时想领取的券，登录成功后自动领取
 const pendingCode = ref(null)

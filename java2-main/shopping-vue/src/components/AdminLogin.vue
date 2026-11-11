@@ -4,7 +4,7 @@
       <div class="brand">
         <div class="logo">⚙️</div>
         <h2>后台管理系统</h2>
-        <p class="sub">萧逸商城 · 商品数据管理后台</p>
+        <p class="sub">{{ SHOP_NAME }} · 商品数据管理后台</p>
       </div>
 
       <form @submit.prevent="submit" novalidate>
@@ -41,6 +41,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { store, adminLogin, go, toast, isAdminUser } from '../store.js'
+import { SHOP_NAME } from '../brand.js'
 
 // 已在商城前台用管理员账号登录时，预填账号，只需再输一次密码
 const form = reactive({ username: store.user?.nick || '', pwd: '' })

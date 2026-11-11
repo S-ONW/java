@@ -1,4 +1,4 @@
-/* ============ 萧逸主题 · 深蓝火焰星空系 ============ */
+/* ============ 逸如反掌商城 · 深蓝火焰星空系 ============ */
 :root{
   --primary:#2b6cb8; --primary-dark:#1f5090; --bg:#f0f5fb; --card:#ffffff;
   --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2; --shadow:0 6px 24px rgba(30,60,110,.10);
@@ -109,6 +109,22 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .card .add{margin-top:6px;background:var(--primary);color:#fff;border-radius:10px;padding:9px;font-weight:600}
 .card .add:hover{background:var(--primary-dark)}.card .add:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
+
+/* 吉祥物（assets/mascot 里的表情小头像）：空状态 / 弹窗 / 登录侧栏共用 */
+.mascot{
+  display:block;margin:0 auto 8px;width:88px;height:88px;object-fit:contain;
+  filter:drop-shadow(0 8px 14px rgba(22,59,107,.16));
+  user-select:none;-webkit-user-drag:none;pointer-events:none;
+}
+.mascot.sm{width:68px;height:68px;margin-bottom:10px}
+.mascot.lg{width:108px;height:108px;margin-bottom:10px}
+.empty .mascot{margin-bottom:6px}
+.empty-tip{font-size:13px;margin-top:4px;color:var(--muted);opacity:.85}
+/* 暗色主题：深色头发贴深色卡片会糊成一团，垫一层很淡的冷光晕把它托出来 */
+[data-theme="dark"] .mascot{
+  background:radial-gradient(circle at 50% 50%, rgba(150,195,255,.16), rgba(150,195,255,0) 70%);
+  filter:drop-shadow(0 0 3px rgba(150,195,255,.28)) drop-shadow(0 8px 16px rgba(0,0,0,.45));
+}
 
 /* Pagination */
 .pager{display:flex;justify-content:center;gap:8px;margin-top:24px}

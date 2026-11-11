@@ -1,7 +1,10 @@
 <template>
   <div class="wrap page">
     <div class="section-title">我的订单 <span class="back" @click="go('home')">← 返回</span></div>
-    <div v-if="!store.orders.length" class="empty">还没有订单，去逛逛吧 🛒</div>
+    <div v-if="!store.orders.length" class="empty">
+      <img class="mascot" :src="mascotCalm" alt="还没有订单" />
+      还没有订单，去逛逛吧 🛒
+    </div>
     <div v-else>
       <div class="order-card" v-for="o in list" :key="o.no">
         <div class="oh"><span>订单号 {{ o.no }}</span><span>{{ o.time }}</span></div>
@@ -21,6 +24,7 @@
 </template>
 
 <script setup>
+import mascotCalm from '../assets/mascot/calm.png'
 import { computed } from 'vue'
 import { store, pById, money, go, confirmRecv, cancelOrder, payOrder } from '../store.js'
 

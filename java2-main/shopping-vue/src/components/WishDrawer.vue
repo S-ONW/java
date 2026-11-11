@@ -5,7 +5,10 @@
       <button class="close" @click="closeDrawer">✕</button>
     </header>
     <div class="items">
-      <div v-if="!store.wish.length" class="empty">还没有收藏的商品 ❤️</div>
+      <div v-if="!store.wish.length" class="empty">
+        <img class="mascot sm" :src="mascotHappy" alt="还没有收藏" />
+        还没有收藏的商品 ❤️
+      </div>
       <div v-for="id in store.wish" :key="id" class="item">
         <div class="ic">{{ pById(id).icon }}</div>
         <div class="info">
@@ -19,5 +22,6 @@
 </template>
 
 <script setup>
+import mascotHappy from '../assets/mascot/happy.png'
 import { store, pById, money, toggleFav, closeDrawer } from '../store.js'
 </script>

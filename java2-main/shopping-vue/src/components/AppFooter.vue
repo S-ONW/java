@@ -2,7 +2,7 @@
   <footer>
     <div class="foot-in">
       <div>
-        <h4>萧逸商城 · 让好物触手可及</h4>
+        <h4>{{ SHOP_NAME }} · 让好物触手可及</h4>
         <p>精选全球好物，极速发货，七天无理由退换，购物更安心。</p>
         <div class="news">
           <input v-model="email" placeholder="输入邮箱订阅优惠" />
@@ -13,13 +13,14 @@
       <div><h4>关于我们</h4><a>品牌故事</a><a>加入我们</a><a>联系方式</a><a>商家入驻</a></div>
       <div><h4>帮助中心</h4><a>常见问题</a><a>退换货</a><a>投诉建议</a><a>隐私条款</a></div>
     </div>
-    <div class="copy">© 2026 萧逸商城 · 本页面为演示 Demo，仅用于前端展示，不含真实交易</div>
+    <div class="copy">© 2026 {{ SHOP_NAME }} · 本页面为演示 Demo，仅用于前端展示，不含真实交易</div>
   </footer>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { subscribe } from '../store.js'
+import { SHOP_NAME } from '../brand.js'
 
 const email = ref('')
 function onSubscribe() {

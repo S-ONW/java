@@ -1,12 +1,20 @@
 <template>
   <header>
     <div class="nav">
-      <div class="logo" @click="go('home')">
-        <img :src="logoUrl" alt="萧逸商城" class="logo-img" />
+      <!-- 品牌 Logo：任何界面（含登录 / 注册 / 结算 / 订单 / 账户）点一下都回首页 -->
+      <a
+        class="logo"
+        href="#home"
+        role="button"
+        :title="'返回' + SHOP_NAME + '首页'"
+        aria-label="返回首页"
+        @click.prevent="goHome"
+      >
+        <img :src="logoUrl" :alt="SHOP_NAME" class="logo-img" />
         <transition name="hint-pop">
-          <span v-if="showHint" class="logo-hint">点我回到首页</span>
+          <span v-if="showHint && store.view !== 'home'" class="logo-hint">点我回到首页</span>
         </transition>
-      </div>
+      </a>
       <div class="search">
         <input v-model="keyword" type="text" placeholder="搜索商品，如 耳机 / 咖啡 / 瑜伽…" @keyup.enter="onSearch" />
         <button @click="onSearch">搜索</button>
@@ -46,8 +54,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { store, cartCount, go, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat, toast, openAuth } from '../store.js'
+import { store, cartCount, go, goHome, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat, toast, openAuth } from '../store.js'
 import logoUrl from '../assets/logo.jpg'
+import { SHOP_NAME } from '../brand.js'
 
 const keyword = ref(store.keyword)
 const showAuthMenu = ref(false)
@@ -103,7 +112,17 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <style scoped>
-.logo { position: relative; display: flex; align-items: center; }
+.logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: transform .12s ease;
+}
+.logo:active { transform: scale(.95); }
+.logo:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .logo-hint {
   position: absolute;
   top: -8px;

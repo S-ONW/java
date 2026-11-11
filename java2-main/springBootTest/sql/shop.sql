@@ -3,19 +3,47 @@
 
  Source Server         : localhost_3306
  Source Server Type    : MySQL
- Source Server Version : 80408 (8.4.8)
+ Source Server Version : 80039 (8.0.39)
  Source Host           : localhost:3306
  Source Schema         : shop
 
  Target Server Type    : MySQL
- Target Server Version : 80408 (8.4.8)
+ Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 10/11/2026 01:07:00
+ Date: 11/11/2026 09:54:49
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for coupon
+-- ----------------------------
+DROP TABLE IF EXISTS `coupon`;
+CREATE TABLE `coupon`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '券码（唯一，领券/用券按它匹配）',
+  `title` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '券名称',
+  `descp` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '券说明',
+  `type` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'fix' COMMENT '类型：pct=折扣，fix=立减',
+  `val` double NOT NULL DEFAULT 0 COMMENT '面值：pct 为减免比例（0.2=减20%即8折），fix 为立减金额（元）',
+  `min_amount` int NOT NULL DEFAULT 0 COMMENT '使用门槛（订单小计 >= 该值可用，0=无门槛）',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_coupon_code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 60 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券池表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of coupon
+-- ----------------------------
+INSERT INTO `coupon` VALUES (1, 'SAVE20', '全场 8 折券', '全场商品通用 · 不限品类', 'pct', 0.2, 0, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (2, 'WELCOME10', '新人立减券', '新客专享 · 无门槛立减', 'fix', 10, 0, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (3, 'VIP30', 'VIP 大额券', 'VIP 专享 · 大额立减', 'fix', 30, 199, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (4, 'SAVE50', '满减狂欢券', '满 299 立减 50', 'fix', 50, 299, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (5, 'FREE5', '无门槛 5 元券', '下单即减 · 全场通用', 'fix', 5, 0, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (6, 'PCT30', '限时 7 折券', '指定专区 7 折优惠', 'pct', 0.3, 0, '2026-11-11 08:56:41');
+INSERT INTO `coupon` VALUES (53, 'SSS', '满100减20', '', 'fix', 20, 100, '2026-11-11 09:10:11');
 
 -- ----------------------------
 -- Table structure for product
@@ -95,12 +123,11 @@ CREATE TABLE `user_coupon`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_coupon
 -- ----------------------------
-INSERT INTO `user_coupon` VALUES (2, 'dd@shop.local', 'SAVE20', '2026-11-09 11:52:07');
 INSERT INTO `user_coupon` VALUES (3, 'ww@shop.local', 'VIP30', '2026-11-09 11:53:04');
 
 SET FOREIGN_KEY_CHECKS = 1;

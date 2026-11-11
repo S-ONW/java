@@ -27,9 +27,13 @@ export const store = reactive({
   // 后台管理员登录态：{ username, nick, token, offline }
   admin: LS.get('shopAdmin', null),
 
-  // 优惠券池：领券中心/结账/后台优惠券管理共用。后台可增删改，改动持久化到本地，
-  // 覆盖 data.js 的默认 COUPON_POOL；后端未存券池，仅存「谁领了哪张券」。
+  // 优惠券池：领券中心 / 结算 / 后台优惠券管理共用，数据来自后端 coupon 表
+  // （启动时由 loadCouponPool() 同步；后端不可用时先用 data.js 的 COUPON_POOL 兜底）。
   couponPool: LS.get('shopCouponPool', null) || COUPON_POOL.map((c) => ({ ...c })),
+
+  // 每张券的「已领取人数」（coupon_code → 人数），后台概览用：由 loadCouponStats()
+  // 从 user_coupon 表统计，不持久化，进后台时现拉。
+  couponStats: {},
 
   // 用户相关的购物数据（购物车/收藏/订单/优惠券）改为「按用户隔离」：
   // 未登录时为 0/空；登录后从「该用户的存储 key」加载，切换账户即切换对应数据。
@@ -204,6 +208,19 @@ export function go(view) {
   store.view = view
   store.page = 1
   window.scrollTo({ top: 0 })
+}
+// 顶部 Logo / 品牌字统一走这里：任何界面点一下，都回到「干净的首页」
+// （顺手清掉搜索词、分类、排序、筛选，避免点了 Logo 还停在上次的筛选结果里）
+export function goHome() {
+  store.keyword = ''
+  store.cat = 'all'
+  store.sort = 'default'
+  store.filters = { min: null, max: null, rate: 0 }
+  // 记一笔 #home：刷新后仍停在首页（否则未登录时会按默认规则落回注册页）
+  try {
+    if (location.hash !== '#home') history.replaceState(null, '', '#home')
+  } catch (e) { /* file:// 等场景忽略 */ }
+  go('home')
 }
 export function openAccount() {
   store.view = 'account'
@@ -596,6 +613,43 @@ export async function loadProducts() {
   }
 }
 
+/**
+ * 拉取后端优惠券池（coupon 表），覆盖本地券池。
+ * 券池已由「前端写死 COUPON_POOL」改为「数据库 coupon 表」：
+ * 领券中心 / 结算抵扣 / 后台优惠券管理读的都是 store.couponPool，
+ * 只要这里同步成功，三处就都与数据库一致；后端不可用时沿用本地数据。
+ */
+export async function loadCouponPool() {
+  try {
+    const r = await fetch(API + '/api/coupon/pool')
+    const res = await r.json()
+    // 注意：空数组也要覆盖——否则后台把券删光后，前端仍会显示上一次的旧券池
+    if (res.code === 200 && Array.isArray(res.data)) {
+      store.couponPool = res.data
+      save()
+      return { ok: true, msg: res.data.length ? '已同步后端优惠券数据' : '后端券池当前为空' }
+    }
+    return { ok: false, msg: res.msg || '后端暂无优惠券数据' }
+  } catch (e) {
+    return { ok: false, msg: '未连接后端，当前使用本地优惠券数据' }
+  }
+}
+
+/**
+ * 拉取「每张券被领了多少人」（后台优惠券概览用）：GET /api/coupon/admin/stats。
+ * 统计来自 user_coupon 表；后端不可用或离线模式则保留旧值（本地没有领取明细，无从统计）。
+ */
+export async function loadCouponStats() {
+  if (!store.admin || store.admin.offline) return store.couponStats
+  try {
+    const res = await adminWrite('/api/coupon/admin/stats')
+    if (res.code === 200 && res.data) store.couponStats = res.data
+  } catch (e) {
+    // 后端不可用：保留上一次的统计值
+  }
+  return store.couponStats
+}
+
 // 本次会话的管理员凭据，仅存 sessionStorage（标签页关闭即清除，不长期落盘）。
 // 用途：后端 token 是内存态，服务/devtools 热重启或过期后会自动失效；
 // 此时用它静默重新登录换取新 token，避免用户编辑到一半被踢回登录页、丢失表单。
@@ -744,11 +798,12 @@ export function adminLogout() {
 }
 
 // ==================== 后台优惠券管理 ====================
-// 优惠券池（store.couponPool）由后台增删改，持久化在本地；后端未存券池，
-// 只存「谁领了哪张券」（user_coupon 表）。后台「发放」= 给某用户写一条已领取记录。
+// 券池已落库：优惠券池 = coupon 表，「谁领了哪张券」= user_coupon 表。
+// 后台增删改优先写后端（/api/coupon/admin/save、/api/coupon/admin/delete），
+// 成功后立刻重新拉取券池；后端不可用（或离线模式登录）时退化为本地修改。
 
-/** 校验券字段，返回错误文案或空串 */
-function couponValidate(c) {
+/** 校验券字段，返回错误文案或空串；original 为编辑前的券对象（用于排除自身） */
+function couponValidate(c, original) {
   const code = (c.code || '').trim().toUpperCase()
   if (!code) return '券码（code）不能为空'
   if (!/^[A-Z0-9_]+$/.test(code)) return '券码只能由字母、数字、下划线组成'
@@ -756,43 +811,95 @@ function couponValidate(c) {
   if (c.type !== 'pct' && c.type !== 'fix') return '券类型需为「折扣」或「立减」'
   const val = +c.val
   if (isNaN(val) || val <= 0) return '面值/折扣需为大于 0 的数字'
-  if (c.type === 'pct' && (val > 1 || val < 0.01)) return '折扣需在 0.01 ~ 1 之间（如 0.8 表示 8 折）'
+  if (c.type === 'pct' && (val > 1 || val < 0.01)) return '折扣需在 0.01 ~ 1 之间（如 0.2 表示减 20%）'
   const min = c.min == null ? 0 : +c.min
   if (isNaN(min) || min < 0) return '使用门槛需为不小于 0 的数字'
-  // 码重复校验（编辑时排除自身）
-  if (store.couponPool.some((x) => x.code === code && x !== c)) return '该券码已存在'
+  // 码重复校验（编辑时排除自身；注意不能拿 clone 出来的对象做引用比较）
+  if (store.couponPool.some((x) => x.code === code && x !== (original || c))) return '该券码已存在'
   return ''
 }
 
-/** 新增或修改优惠券（有原始引用视为修改） */
-export function adminSaveCoupon(c, original) {
+/** 把表单字段归一化成券对象（amount / cond 是展示文案，由 type/val/min 推导） */
+function normalizeCoupon(body) {
+  const code = (body.code || '').trim().toUpperCase()
+  return {
+    code,
+    title: (body.title || '').trim(),
+    desc: (body.desc || '').trim(),
+    type: body.type,
+    val: +body.val,
+    // val 统一按「减免比例」存：pct 0.2 → 减 20% →「8 折」
+    amount: body.type === 'pct' ? (Math.round((1 - +body.val) * 100) / 10) + ' 折' : '¥' + body.val,
+    cond: (+(body.min || 0)) > 0 ? '满 ' + body.min + ' 可用' : '无门槛',
+    min: +(body.min || 0),
+  }
+}
+
+/** 离线保存：直接改本地券池 */
+function saveCouponLocal(body, original) {
+  const norm = normalizeCoupon(body)
+  const i = store.couponPool.indexOf(original)
+  if (i > -1) store.couponPool[i] = { ...norm, id: body.id == null ? undefined : body.id }
+  else store.couponPool.push(norm)
+  save()
+  return { ok: true, msg: (original ? '优惠券已更新' : '优惠券已新增') + '（离线模式）' }
+}
+
+/** 新增或修改优惠券（有原始引用视为修改），优先写数据库 */
+export async function adminSaveCoupon(c, original) {
   const code = (c.code || '').trim().toUpperCase()
-  const err = couponValidate({ ...c, code })
+  const err = couponValidate({ ...c, code }, original)
   if (err) return { ok: false, msg: err }
-  const amount = c.type === 'pct' ? Math.round(+c.val * 10) + ' 折' : '¥' + c.val
-  const cond = (+(c.min || 0)) > 0 ? '满 ' + c.min + ' 可用' : '无门槛'
-  const norm = {
+  const body = {
+    id: c.id == null ? null : c.id,
     code,
     title: (c.title || '').trim(),
     desc: (c.desc || '').trim(),
     type: c.type,
-    val: c.type === 'pct' ? +c.val : +c.val,
-    amount,
-    cond,
+    val: +c.val,
     min: +(c.min || 0),
   }
-  const i = store.couponPool.indexOf(original)
-  if (i > -1) store.couponPool[i] = norm
-  else store.couponPool.push(norm)
-  save()
-  return { ok: true, msg: original ? '优惠券已更新' : '优惠券已新增' }
+  // 离线模式登录（token='offline'）时不请求后端，直接改本地
+  if (store.admin && store.admin.offline) return saveCouponLocal(body, original)
+  try {
+    const res = await adminWrite('/api/coupon/admin/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.code === 200) {
+      await loadCouponPool()
+      return { ok: true, msg: '已保存到数据库' }
+    }
+    if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效，请重新登录后台' } }
+    return { ok: false, msg: res.msg || '保存失败' }
+  } catch (e) {
+    // 后端不可用 → 本地修改，界面同样即时生效
+    return saveCouponLocal(body, original)
+  }
 }
 
-/** 删除优惠券（从券池移除） */
-export function adminDeleteCoupon(c) {
+/** 删除优惠券（从券池/数据库 coupon 表移除），优先写数据库 */
+export async function adminDeleteCoupon(c) {
+  if (!(store.admin && store.admin.offline)) {
+    try {
+      const res = await adminWrite(
+        '/api/coupon/admin/delete?code=' + encodeURIComponent(c.code),
+        { method: 'DELETE' }
+      )
+      if (res.code === 200) {
+        await loadCouponPool()
+        return { ok: true, msg: '已从数据库删除' }
+      }
+      if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效，请重新登录后台' } }
+      return { ok: false, msg: res.msg || '删除失败' }
+    } catch (e) {
+      // 后端不可用 → 删本地
+    }
+  }
   store.couponPool = store.couponPool.filter((x) => x !== c)
   save()
-  return { ok: true, msg: '优惠券已删除' }
+  return { ok: true, msg: '优惠券已删除（离线模式）' }
 }
 
 /**
@@ -814,7 +921,7 @@ export async function adminGrantCoupon(email, code) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: e, code }),
     })
-    if (res.code === 200) return { ok: true, msg: '发放成功' }
+    if (res.code === 200) { await loadCouponStats(); return { ok: true, msg: '发放成功' } }
     if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效' } }
     return { ok: false, msg: res.msg || '发放失败' }
   } catch (err) {
@@ -844,7 +951,7 @@ export async function adminRemoveUserCoupon(email, code) {
       '/api/coupon/admin/remove?email=' + encodeURIComponent(e) + '&code=' + encodeURIComponent(code),
       { method: 'DELETE' }
     )
-    if (res.code === 200) return { ok: true, msg: '已删除' }
+    if (res.code === 200) { await loadCouponStats(); return { ok: true, msg: '已删除' } }
     if (res.code === 401) { adminSessionExpired(); return { ok: false, msg: res.msg || '登录已失效' } }
     return { ok: false, msg: res.msg || '删除失败' }
   } catch (err) {

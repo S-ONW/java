@@ -63,7 +63,11 @@
 
         <div class="grid">
           <ProductCard v-for="p in shown" :key="p.id" :product="p" />
-          <div v-if="!shown.length" class="empty">😢 没有找到符合条件的商品</div>
+          <div v-if="!shown.length" class="empty">
+            <img class="mascot" :src="mascotDizzy" alt="没有找到商品" />
+            没有找到符合条件的商品
+            <p class="empty-tip">换个关键词或筛选项再试试～</p>
+          </div>
         </div>
 
         <div class="pager" v-if="store.cat !== 'all' && total > store.perPage">
@@ -84,6 +88,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
+import mascotDizzy from '../assets/mascot/dizzy.png'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
