@@ -1,8 +1,9 @@
 // 商品/广告/优惠等静态数据，从原 shopping.html 抽取而来
+// 首页首屏企划：文案走注册页的「清冷短句」风格（不用 emoji，靠衬线字与字距撑气质）
 export const BANNERS = [
-  { bg: "linear-gradient(120deg,#5b9bd5,#2b6cb8 60%,#163b6b)", h: "全场低至 5 折 🎉", p: "精选好物 · 极速发货 · 七天无理由退换", t: "新人专享 · 满 99 包邮", d: "🛍️", link: "coupon" },
-  { bg: "linear-gradient(120deg,#4a90d9,#1f5090)", h: "数码焕新季 ⚡", p: "耳机 / 键盘 / 手表 限时直降", t: "晒单返现 · 最高返 50", d: "🎧", link: "cat:数码" },
-  { bg: "linear-gradient(120deg,#e8b84b,#c9981f)", h: "健康生活节 🌿", p: "瑜伽 / 运动 / 个护 满 199 减 30", t: "会员双倍积分", d: "🧘", link: "cat:运动" },
+  { en: "Winter Selection · 01", h: "冬物上新，全场五折起", p: "全场低至 5 折 · 顺丰发货 · 七天无理由退换", t: "新人专享 · 满 ¥99 包邮", link: "coupon" },
+  { en: "Digital Renewal · 02", h: "数码焕新，静享好声", p: "耳机 / 键盘 / 手表，限时直降", t: "晒单返现 · 最高返 ¥50", link: "cat:数码" },
+  { en: "Healthy Living · 03", h: "起居有度，身心皆安", p: "瑜伽 / 运动 / 个护，满 199 减 30", t: "会员双倍积分", link: "cat:运动" },
 ]
 
 export const PRODUCTS = [

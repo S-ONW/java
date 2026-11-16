@@ -141,25 +141,40 @@
         <section class="panel" style="margin-top:16px">
           <h3 style="font-size:16px;margin-bottom:12px">🎁 发放优惠券给用户</h3>
           <div class="grant-row">
-            <input v-model="grantEmail" class="grant-input" placeholder="用户邮箱（如 xiaoyi@shop.local）" />
+            <input
+              v-model="grantName"
+              class="grant-input"
+              list="user-name-list"
+              placeholder="用户名称（昵称，如 xiaoyi）"
+            />
             <select v-model="grantCode" class="grant-select">
               <option value="" disabled>选择优惠券</option>
               <option v-for="c in couponPool" :key="c.code" :value="c.code">{{ c.title }}（{{ c.code }}）</option>
             </select>
-            <button class="btn primary" :disabled="granting || !grantEmail || !grantCode" @click="doGrant">{{ granting ? '发放中…' : '发放' }}</button>
+            <button class="btn primary" :disabled="granting || !grantName || !grantCode" @click="doGrant">{{ granting ? '发放中…' : '发放' }}</button>
           </div>
-          <p class="grant-tip">发放后，该用户登录即可在「我的优惠券」中看到并使用；后端不可用时自动降级为离线发放（仅写入本地）。</p>
+          <p class="grant-tip">填注册时用的「名称」即可，不用再记邮箱；发放后该用户登录就能在「我的优惠券」里看到并使用。后端不可用时自动降级为离线发放（仅写入本地）。</p>
 
           <h3 style="font-size:16px;margin:18px 0 12px">♻️ 回收用户已领取的券</h3>
           <div class="grant-row">
-            <input v-model="revokeEmail" class="grant-input" placeholder="用户邮箱（如 xiaoyi@shop.local）" />
+            <input
+              v-model="revokeName"
+              class="grant-input"
+              list="user-name-list"
+              placeholder="用户名称（昵称，如 xiaoyi）"
+            />
             <select v-model="revokeCode" class="grant-select">
               <option value="" disabled>选择优惠券</option>
               <option v-for="c in couponPool" :key="c.code" :value="c.code">{{ c.title }}（{{ c.code }}）</option>
             </select>
-            <button class="btn danger" :disabled="revoking || !revokeEmail || !revokeCode" @click="doRevoke">{{ revoking ? '回收中…' : '回收' }}</button>
+            <button class="btn danger" :disabled="revoking || !revokeName || !revokeCode" @click="doRevoke">{{ revoking ? '回收中…' : '回收' }}</button>
           </div>
           <p class="grant-tip">只会删掉该用户名下的这张券（user_coupon 记录），券本身仍留在券池里给别人领。</p>
+
+          <!-- 名称候选：本机注册过的账号（可自由输入，不限于此列表） -->
+          <datalist id="user-name-list">
+            <option v-for="n in userNameOptions" :key="n" :value="n"></option>
+          </datalist>
         </section>
       </template>
     </div>
@@ -259,6 +274,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import {
   store, loadProducts, loadCouponPool, loadCouponStats, adminSaveProduct, adminDeleteProduct, adminDeleteProducts,
   adminSaveCoupon, adminDeleteCoupon, adminGrantCoupon, adminRemoveUserCoupon,
+  emailOfUser, knownUserNames,
   adminLogout, adminCheck, go, toast, isAdminUser,
 } from '../store.js'
 import { SHOP_NAME } from '../brand.js'
@@ -460,30 +476,34 @@ async function removeCoupon(c) {
   toast(res.msg)
 }
 
-// 发放优惠券
-const grantEmail = ref('')
+// 发放优惠券：后台只填用户「名称」（注册昵称），内部再换算成后端账号标识
+const grantName = ref('')
 const grantCode = ref('')
 const granting = ref(false)
+// 输入框下拉候选：本机注册过的名称（可自由输入，不强制从列表里选）
+const userNameOptions = knownUserNames()
 async function doGrant() {
-  if (!grantEmail.value.trim() || !grantCode.value) { toast('请填写用户邮箱并选择优惠券'); return }
+  const name = grantName.value.trim()
+  if (!name || !grantCode.value) { toast('请填写用户名称并选择优惠券'); return }
   granting.value = true
-  const res = await adminGrantCoupon(grantEmail.value.trim(), grantCode.value)
+  const res = await adminGrantCoupon(emailOfUser(name), grantCode.value)
   granting.value = false
   toast(res.msg)
-  if (res.ok) { grantEmail.value = ''; grantCode.value = '' }
+  if (res.ok) { grantName.value = ''; grantCode.value = '' }
 }
 
 // 回收某用户已领取的券（删 user_coupon 记录，券仍在券池）
-const revokeEmail = ref('')
+const revokeName = ref('')
 const revokeCode = ref('')
 const revoking = ref(false)
 async function doRevoke() {
-  if (!revokeEmail.value.trim() || !revokeCode.value) { toast('请填写用户邮箱并选择优惠券'); return }
+  const name = revokeName.value.trim()
+  if (!name || !revokeCode.value) { toast('请填写用户名称并选择优惠券'); return }
   revoking.value = true
-  const res = await adminRemoveUserCoupon(revokeEmail.value.trim(), revokeCode.value)
+  const res = await adminRemoveUserCoupon(emailOfUser(name), revokeCode.value)
   revoking.value = false
   toast(res.msg)
-  if (res.ok) { revokeEmail.value = ''; revokeCode.value = '' }
+  if (res.ok) { revokeName.value = ''; revokeCode.value = '' }
 }
 
 // 进入后台页时复核登录态：后端 token 为内存态，重启/过期后 localStorage 里仍是旧 token，

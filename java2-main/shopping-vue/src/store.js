@@ -407,6 +407,28 @@ function nickToEmail(nick) {
 }
 
 /**
+ * 后台发券 / 收券用：把用户填的「名称」换成后端认的账号标识。
+ * 名称 = 注册时的昵称，后端存的邮箱本来就是「昵称@shop.local」，
+ * 这层换算是内部细节，不再让管理员去填邮箱。
+ * 兼容老习惯：直接粘邮箱（带 @）就原样使用。
+ */
+export function emailOfUser(name) {
+  const v = (name || '').trim()
+  if (!v) return ''
+  return v.includes('@') ? v : nickToEmail(v)
+}
+
+/** 后台输入框的候选名称：本机注册表里出现过的昵称（只作提示，可自由输入） */
+export function knownUserNames() {
+  const seen = new Set()
+  for (const u of localUsers()) {
+    const n = (u.nick || u.name || '').trim()
+    if (n) seen.add(n)
+  }
+  return [...seen]
+}
+
+/**
  * 注册：账号 = 昵称（无需邮箱）。优先写 Spring Boot 后端（POST /api/user/register），
  * 后端会校验图形验证码（captchaToken + captcha），校验通过才入库；后端未启动时回退为纯本地注册。
  * 成功均写入本地账号表，保证随后必须"填对昵称和密码"才能登录。
@@ -903,13 +925,13 @@ export async function adminDeleteCoupon(c) {
 }
 
 /**
- * 管理员发放优惠券给指定用户（email）。
+ * 管理员发放优惠券给指定用户（email 为内部账号标识，由 emailOfUser(名称) 换算而来）。
  * 优先走后端（POST /api/coupon/admin/grant，带 X-Admin-Token）；后端不可用则
  * 直接写该用户本地的已领记录（离线模式）。
  */
 export async function adminGrantCoupon(email, code) {
   const e = (email || '').trim()
-  if (!e) return { ok: false, msg: '请填写用户邮箱' }
+  if (!e) return { ok: false, msg: '请先填写用户名称' }
   if (!couponInfo(code)) return { ok: false, msg: '该优惠券不存在' }
   // 离线模式登录（token='offline'）时不请求后端，直接写本地
   if (store.admin && store.admin.offline) {

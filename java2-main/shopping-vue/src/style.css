@@ -1,17 +1,28 @@
-/* ============ 逸如反掌商城 · 深蓝火焰星空系 ============ */
+/* ============ 逸如反掌商城 · 雪景清冷系（与注册页同一套视觉） ============ */
 :root{
   --primary:#2b6cb8; --primary-dark:#1f5090; --bg:#f0f5fb; --card:#ffffff;
   --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2; --shadow:0 6px 24px rgba(30,60,110,.10);
   --radius:16px; --star:#e8b84b; --ok:#2b6cb8; --header-bg:rgba(248,251,255,.94);
   --blue:#4a90d9; --warn:#e8b84b;
   --accent:#122033;
+  /* 标题字体：宋体 / 衬线，字距略宽——注册页的雪景气质，全站标题统一走这套 */
+  --serif:"STSong","Songti SC","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
+  /* 整页底色：顶部一段淡蓝雪雾，往下收到极浅的冷白，长页面也不会糊成一片 */
+  --page-bg:linear-gradient(180deg,#d7e5f5 0,#e9f0fa 360px,#eef4fb 100%);
+  --thumb-bg:linear-gradient(160deg,#f9fcff,#e9f1fb);
+  --hairline:#cfe0f2;
+  /* 首屏以外的标题 / 标签用这套黑体，比衬线更实、更有分量（PingFang / 雅黑 都有真正的粗体字重） */
+  --sans-strong:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans SC","Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
 }
 [data-theme="dark"]{
   --bg:#0e1520; --card:#16202e; --text:#e4ecf6; --muted:#8fa0b6; --line:#263449;
   --shadow:0 6px 24px rgba(0,0,0,.55); --header-bg:rgba(14,21,32,.94);
+  --page-bg:linear-gradient(180deg,#15253c 0,#101a29 360px,#0e1520 100%);
+  --thumb-bg:linear-gradient(160deg,#1b2636,#141d2a);
+  --hairline:#2f4159;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;transition:background .25s,color .25s}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--page-bg);background-color:var(--bg);background-repeat:no-repeat;min-height:100vh;color:var(--text);line-height:1.5;transition:background .25s,color .25s}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:none}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
@@ -96,7 +107,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
 .card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:.2s;display:flex;flex-direction:column;position:relative}
 .card:hover{transform:translateY(-4px)}
-.card .thumb{height:150px;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,#f7faff,#eaf1fa);cursor:pointer}
+.card .thumb{height:150px;display:flex;align-items:center;justify-content:center;font-size:60px;background:var(--thumb-bg);cursor:pointer}
 .tag-badge{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;color:#fff;z-index:2}
 .fav{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.85);border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center}
 .fav.on{color:var(--primary)}
@@ -165,7 +176,7 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .modal-body{padding:20px}
 .detail{display:flex;gap:20px;flex-wrap:wrap}
 .gallery{width:200px;flex-shrink:0}
-.gallery .big{height:200px;border-radius:14px;background:linear-gradient(135deg,#f7faff,#eaf1fa);display:flex;align-items:center;justify-content:center;font-size:96px}
+.gallery .big{height:200px;border-radius:14px;background:var(--thumb-bg);display:flex;align-items:center;justify-content:center;font-size:96px}
 .gallery .thumbs{display:flex;gap:8px;margin-top:10px}
 .gallery .thumbs div{width:54px;height:54px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;border:2px solid transparent}
 .gallery .thumbs div.on{border-color:var(--primary)}

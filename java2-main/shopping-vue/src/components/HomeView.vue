@@ -1,41 +1,77 @@
 <template>
-  <div class="wrap">
-    <!-- 轮播 Banner -->
-    <div class="slides">
-      <div
-        v-for="(b, i) in BANNERS"
-        :key="i"
-        class="slide"
-        :class="{ active: i === current }"
-        :style="{ background: b.bg }"
-        @click="onBanner(b)"
-      >
-        <div>
-          <h1>{{ b.h }}</h1>
-          <p>{{ b.p }}</p>
-          <span class="tag">{{ b.t }}</span>
-        </div>
-        <div class="deco">{{ b.d }}</div>
-      </div>
-      <div class="dots">
-        <div
-          v-for="(b, i) in BANNERS"
-          :key="i"
-          class="dot"
-          :class="{ on: i === current }"
-          @click="current = i"
-        ></div>
-      </div>
+  <div class="wrap home">
+    <!-- 氛围气泡：与注册页同一套漂浮装饰，只做背景不抢内容 -->
+    <div class="atmos" aria-hidden="true">
+      <span class="bubble b1"></span>
+      <span class="bubble b2"></span>
+      <span class="bubble b3"></span>
     </div>
 
-    <div class="layout">
-      <!-- 分类导航已移到页面顶部（搜索栏下方），这里只保留商品主区 -->
-      <main>
-        <div class="toolbar">
+    <!-- 首屏：左栏雪景插画（与注册页同一张图、同一排版），右栏当季企划轮播 -->
+    <!-- 只在「全部商品」时出现；切到数码电子等具体分类就收起，直接进入商品列表 -->
+    <Transition name="hero" appear>
+      <section v-if="showHero" class="hero" @mouseenter="pause" @mouseleave="resume">
+      <div class="hero-art" :style="{ backgroundImage: 'url(' + heroArt + ')' }">
+        <div class="art-copy">
+          <p class="eyebrow">{{ SHOP_NAME }} · 冬季选品</p>
+          <h3>雪落无声<br />好物有信</h3>
+          <span class="rule"></span>
+          <ul>
+            <li>千款好物，每日上新</li>
+            <li>满 ¥99 包邮，闪电发货</li>
+            <li>新人专享优惠券礼包</li>
+            <li>七天无理由退换货</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="hero-main">
+        <div class="stage">
+          <div
+            v-for="(b, i) in BANNERS"
+            :key="i"
+            class="scene"
+            :class="{ active: i === current }"
+            @click="onBanner(b)"
+          >
+            <p class="scene-kicker">{{ b.en }}</p>
+            <h1>{{ b.h }}</h1>
+            <p class="lede">{{ b.p }}</p>
+            <span class="scene-tag">{{ b.t }}</span>
+          </div>
+        </div>
+
+        <div class="hero-foot">
+          <div class="actions">
+            <button class="cta" @click="scrollToGrid">开始选购</button>
+            <button class="cta ghost" @click="go('coupon')">领券中心</button>
+          </div>
+          <div class="pips">
+            <button
+              v-for="(b, i) in BANNERS"
+              :key="i"
+              class="pip"
+              :class="{ on: i === current }"
+              :aria-label="'切换到第 ' + (i + 1) + ' 屏'"
+              @click="current = i"
+            ></button>
+          </div>
+        </div>
+      </div>
+    </section>
+    </Transition>
+
+    <main ref="gridTop">
+      <div class="toolbar">
+        <div class="head">
+          <p class="kicker">Collection · 当季陈列</p>
           <h2>
             {{ store.cat === 'all' ? '全部商品' : catLabel(store.cat) }}
-            <small style="color:var(--muted);font-size:13px">({{ total }})</small>
+            <small>{{ total }} 件</small>
           </h2>
+        </div>
+        <label class="sort-wrap">
+          <span class="lab">排序</span>
           <select class="sort" :value="store.sort" @change="onSort">
             <option value="default">综合排序</option>
             <option value="priceAsc">价格从低到高</option>
@@ -43,45 +79,45 @@
             <option value="hot">最热优先</option>
             <option value="rate">好评优先</option>
           </select>
-        </div>
+        </label>
+      </div>
 
-        <div class="filters">
-          <span style="font-size:13px;color:var(--muted)">价格</span>
-          <input ref="minP" type="number" placeholder="最低" :value="store.filters.min ?? ''" />
-          <span>—</span>
-          <input ref="maxP" type="number" placeholder="最高" :value="store.filters.max ?? ''" />
-          <button class="btn ghost" @click="onFilter">筛选</button>
-          <span style="font-size:13px;color:var(--muted);margin-left:6px">评分</span>
-          <span
-            v-for="r in [0, 4.5, 4.7, 4.8]"
-            :key="r"
-            class="chip"
-            :class="{ on: store.filters.rate === r }"
-            @click="setRate(r)"
-          >{{ r === 0 ? '全部评分' : r + '分+' }}</span>
-        </div>
+      <div class="filters">
+        <span class="lab">价格</span>
+        <input ref="minP" type="number" placeholder="最低" :value="store.filters.min ?? ''" />
+        <span class="dash">—</span>
+        <input ref="maxP" type="number" placeholder="最高" :value="store.filters.max ?? ''" />
+        <button class="btn ghost filter-btn" @click="onFilter">筛选</button>
+        <span class="lab sep">评分</span>
+        <span
+          v-for="r in [0, 4.5, 4.7, 4.8]"
+          :key="r"
+          class="chip"
+          :class="{ on: store.filters.rate === r }"
+          @click="setRate(r)"
+        >{{ r === 0 ? '全部评分' : r + ' 分以上' }}</span>
+      </div>
 
-        <div class="grid">
-          <ProductCard v-for="p in shown" :key="p.id" :product="p" />
-          <div v-if="!shown.length" class="empty">
-            <img class="mascot" :src="mascotDizzy" alt="没有找到商品" />
-            没有找到符合条件的商品
-            <p class="empty-tip">换个关键词或筛选项再试试～</p>
-          </div>
+      <div class="grid">
+        <ProductCard v-for="p in shown" :key="p.id" :product="p" />
+        <div v-if="!shown.length" class="empty">
+          <img class="mascot" :src="mascotDizzy" alt="没有找到商品" />
+          <p class="empty-t">没有找到符合条件的商品</p>
+          <p class="empty-tip">换个关键词或筛选条件再试试～</p>
         </div>
+      </div>
 
-        <div class="pager" v-if="store.cat !== 'all' && total > store.perPage">
-          <button :disabled="store.page === 1" @click="setPage(store.page - 1)">‹</button>
-          <button
-            v-for="i in pages"
-            :key="i"
-            :class="{ on: i === store.page }"
-            @click="setPage(i)"
-          >{{ i }}</button>
-          <button :disabled="store.page === pages" @click="setPage(store.page + 1)">›</button>
-        </div>
-      </main>
-    </div>
+      <div class="pager" v-if="store.cat !== 'all' && total > store.perPage">
+        <button :disabled="store.page === 1" @click="setPage(store.page - 1)">‹</button>
+        <button
+          v-for="i in pages"
+          :key="i"
+          :class="{ on: i === store.page }"
+          @click="setPage(i)"
+        >{{ i }}</button>
+        <button :disabled="store.page === pages" @click="setPage(store.page + 1)">›</button>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -89,18 +125,44 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
 import mascotDizzy from '../assets/mascot/dizzy.png'
+import heroArt from '../assets/register-hero.webp'
+import { SHOP_NAME } from '../brand.js'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
 const current = ref(0)
 const minP = ref(null)
 const maxP = ref(null)
+const gridTop = ref(null)
 
+// 首屏轮播：右键悬停时暂停，离开后继续，避免用户正在读文案时被切走
 let timer = null
-onMounted(() => {
-  timer = setInterval(() => { current.value = (current.value + 1) % BANNERS.length }, 4000)
+function start() {
+  if (timer) return
+  timer = setInterval(() => { current.value = (current.value + 1) % BANNERS.length }, 5200)
+}
+function pause() {
+  if (timer) { clearInterval(timer); timer = null }
+}
+function resume() { start() }
+
+onMounted(start)
+onUnmounted(pause)
+// 手动点小圆点时，把计时重新起步（让刚选中的这一屏能完整停留）
+watch(current, () => { pause(); start() })
+
+// 横幅只在「全部商品」下展示；切到具体分类就收起，商品列表直接顶上来
+const showHero = computed(() => store.cat === 'all')
+watch(showHero, (on) => {
+  if (on) {
+    current.value = 0
+    start()
+  } else {
+    pause()
+    // 横幅收起后页面会整体上移，如果当时已经往下滚了，顺手回到顶部，避免内容"跳一下"
+    if (window.scrollY > 80) window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 })
-onUnmounted(() => clearInterval(timer))
 
 const filtered = computed(() =>
   store.products.filter((p) => {
@@ -139,7 +201,15 @@ function onFilter() {
   applyFilter(min, max)
 }
 
-// 点击 Banner 跳转：coupon → 领券中心；cat:xxx → 切到对应分类
+// 「开始选购」：平滑滚到商品区，扣掉吸顶头部的高度
+function scrollToGrid() {
+  const el = gridTop.value
+  if (!el) return
+  const y = el.getBoundingClientRect().top + window.scrollY - 124
+  window.scrollTo({ top: y, behavior: 'smooth' })
+}
+
+// 点击首屏文案：coupon → 领券中心；cat:xxx → 切到对应分类
 function onBanner(b) {
   if (!b.link) return
   if (b.link === 'coupon') {
@@ -151,3 +221,256 @@ function onBanner(b) {
   }
 }
 </script>
+
+<style scoped>
+/* ---------- 页面容器与背景氛围 ---------- */
+.home { position: relative; padding-top: 22px; }
+.home > * { position: relative; z-index: 1; }
+.atmos { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.bubble {
+  position: absolute; border-radius: 50%; filter: blur(3px); opacity: .5;
+  animation: float 11s ease-in-out infinite;
+}
+.b1 { width: 220px; height: 220px; top: 6%; left: -100px; background: radial-gradient(circle, #dce8f8, #c2d6ec); }
+.b2 { width: 320px; height: 320px; bottom: -140px; right: -120px; background: radial-gradient(circle, #e6eefa, #cedcee); animation-delay: -5s; }
+.b3 { width: 130px; height: 130px; top: 46%; right: 5%; background: radial-gradient(circle, #e2eefb, #c8dcf0); animation-delay: -2.5s; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-22px); } }
+[data-theme="dark"] .bubble { opacity: .16; }
+
+/* ---------- 首屏：左雪景 + 右企划 ---------- */
+.hero {
+  display: grid; grid-template-columns: 380px 1fr;
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow: hidden;
+}
+/* 出现 / 收起：切分类时横幅轻轻上收，下面的列表接上来 */
+.hero-enter-active { transition: opacity .45s cubic-bezier(.2, .9, .3, 1.1), transform .45s cubic-bezier(.2, .9, .3, 1.1); }
+.hero-leave-active { transition: opacity .2s ease, transform .2s ease; }
+.hero-enter-from { opacity: 0; transform: translateY(14px); }
+.hero-leave-to { opacity: 0; transform: translateY(-10px); }
+
+.hero-art {
+  position: relative; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 424px; padding: 26px 24px 26px; color: #fff;
+  background-color: #a9c8e6; background-position: center 12%; background-size: cover; background-repeat: no-repeat;
+}
+/* 右缘渐隐成卡片底色，与企划区无缝衔接（与注册页同一手法） */
+.hero-art::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(270deg, var(--card) 0%, transparent 30%);
+}
+/* 底部压暗 + 左侧再压一层，白字压在亮雪上也能读清 */
+.hero-art::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(9, 26, 48, .95) 0%, rgba(9, 26, 48, .74) 40%, rgba(9, 26, 48, .22) 74%, rgba(9, 26, 48, 0) 94%),
+    linear-gradient(90deg, rgba(9, 26, 48, .45) 0%, rgba(9, 26, 48, 0) 64%);
+}
+.art-copy { position: relative; z-index: 1; }
+.eyebrow {
+  display: inline-block; font-family: var(--serif); font-size: 11px; letter-spacing: .22em;
+  color: rgba(255, 255, 255, .94); padding: 5px 12px 5px 14px; border-radius: 999px;
+  background: rgba(10, 28, 52, .42); border: 1px solid rgba(255, 255, 255, .26);
+  backdrop-filter: blur(4px); margin: 0 0 14px;
+}
+.hero-art h3 {
+  font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.62;
+  letter-spacing: .16em; text-shadow: 0 2px 14px rgba(4, 16, 34, .6); margin: 0;
+}
+.rule {
+  display: block; width: 44px; height: 1px; margin: 16px 0 18px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, 0));
+}
+.hero-art ul {
+  list-style: none; display: flex; flex-direction: column; gap: 10px;
+  font-family: var(--serif); font-size: 13px; letter-spacing: .06em; color: rgba(255, 255, 255, .9);
+}
+.hero-art li { display: flex; align-items: center; gap: 10px; }
+.hero-art li::before {
+  content: ''; flex-shrink: 0; width: 4px; height: 4px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 9px rgba(190, 225, 255, .95);
+}
+
+.hero-main {
+  position: relative; display: flex; flex-direction: column;
+  padding: 34px 40px 24px; min-height: 424px; min-width: 0;
+}
+.stage { position: relative; flex: 1; min-height: 214px; }
+.scene {
+  position: absolute; inset: 0; margin: 0; padding: 0;
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+  color: inherit; opacity: 0; transform: translateY(10px); pointer-events: none;
+  transition: opacity .55s ease, transform .55s ease; cursor: pointer;
+}
+.scene.active { opacity: 1; transform: none; pointer-events: auto; }
+/* 首屏企划小标：跟着插画走，保留衬线 */
+.scene-kicker {
+  font-family: var(--serif); font-size: 11px; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--primary); opacity: .82; margin-bottom: 12px;
+}
+/* 首屏以外的区块小标：换成稍粗的黑体，字号抬一点点 */
+.kicker {
+  font-family: var(--sans-strong); font-weight: 600; font-size: 11.5px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--primary); opacity: .92; margin-bottom: 12px;
+}
+.scene h1 {
+  font-family: var(--serif); font-weight: 400; font-size: 33px; line-height: 1.45;
+  letter-spacing: .11em; color: var(--text);
+}
+.scene .lede { margin-top: 12px; font-size: 13.5px; color: var(--muted); letter-spacing: .05em; }
+.scene-tag {
+  margin-top: 18px; font-family: var(--serif); font-size: 12px;
+  letter-spacing: .16em; color: var(--primary); padding: 6px 15px; border-radius: 999px;
+  border: 1px solid var(--hairline); background: rgba(43, 108, 184, .05);
+}
+
+.hero-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-top: 20px; margin-top: 16px; border-top: 1px solid var(--line);
+}
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.cta {
+  font-family: var(--serif); font-size: 14px; letter-spacing: .22em; text-indent: .22em;
+  padding: 12px 24px; border-radius: 12px; color: #fff;
+  background: linear-gradient(135deg, var(--primary), #659edb);
+  box-shadow: 0 6px 16px rgba(43, 108, 184, .26); transition: .2s;
+}
+.cta:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(43, 108, 184, .34); }
+.cta:active { transform: translateY(0); }
+.cta.ghost {
+  background: transparent; color: var(--primary); border: 1px solid var(--hairline);
+  box-shadow: none;
+}
+.cta.ghost:hover { background: rgba(43, 108, 184, .07); box-shadow: 0 8px 18px rgba(43, 108, 184, .12); }
+
+.pips { display: flex; align-items: center; gap: 8px; }
+.pip {
+  width: 20px; height: 3px; padding: 0; border-radius: 999px;
+  background: var(--line); transition: .25s;
+}
+.pip:hover { background: var(--muted); }
+.pip.on { width: 34px; background: var(--primary); }
+
+/* ---------- 商品区标题栏 ---------- */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 16px; flex-wrap: wrap; margin: 40px 0 16px;
+}
+.toolbar .head .kicker { margin-bottom: 8px; }
+.toolbar h2 {
+  font-family: var(--sans-strong); font-weight: 600; font-size: 24px; letter-spacing: .05em;
+  color: var(--text); display: flex; align-items: baseline; gap: 10px;
+}
+.toolbar h2 small {
+  font-family: var(--sans-strong); font-weight: 500; font-size: 12.5px; letter-spacing: .06em;
+  color: var(--muted); opacity: .9;
+}
+.sort-wrap { display: flex; align-items: center; gap: 8px; }
+.lab { font-family: var(--sans-strong); font-weight: 600; font-size: 12.5px; letter-spacing: .08em; color: var(--muted); }
+.sort {
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+  font-size: 13px; background: var(--card); color: var(--text);
+  font-family: var(--sans-strong); font-weight: 600; cursor: pointer; outline: none; transition: .18s;
+}
+.sort:hover, .sort:focus { border-color: var(--primary); color: var(--primary); }
+
+/* ---------- 筛选条 ---------- */
+.filters {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 22px; padding: 12px 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+}
+.filters .sep { margin-left: 8px; }
+.filters input {
+  width: 84px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
+  background: var(--bg); color: var(--text); outline: none; font-size: 13px;
+  text-align: center; transition: .18s;
+}
+.filters input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(43, 108, 184, .14); }
+.dash { color: var(--muted); }
+.filters .filter-btn {
+  border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 20px;
+  background: transparent; color: var(--primary); font-family: var(--sans-strong);
+  font-weight: 600; font-size: 13px; letter-spacing: .12em; text-indent: .12em; transition: .18s;
+}
+.filters .filter-btn:hover { background: rgba(43, 108, 184, .07); border-color: var(--primary); }
+.chip {
+  font-size: 12px; padding: 6px 13px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); background: transparent;
+  cursor: pointer; font-family: var(--sans-strong); font-weight: 500;
+  letter-spacing: .02em; transition: .18s;
+}
+.chip:hover { border-color: var(--primary); color: var(--primary); }
+.chip.on {
+  background: rgba(43, 108, 184, .08); border-color: var(--primary);
+  color: var(--primary); font-weight: 600;
+}
+
+/* ---------- 商品卡片：细线、留白、衬线标题 ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 20px; }
+.grid :deep(.card) {
+  border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(30, 60, 110, .05);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.grid :deep(.card:hover) {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 34px rgba(30, 60, 110, .14);
+  border-color: var(--hairline);
+}
+.grid :deep(.card .thumb) { height: 168px; font-size: 62px; background: var(--thumb-bg); }
+.grid :deep(.card .body) { padding: 15px 15px 17px; gap: 5px; }
+.grid :deep(.card .name) { font-family: var(--sans-strong); font-weight: 600; font-size: 15px; letter-spacing: .01em; }
+.grid :deep(.card .desc) { letter-spacing: .02em; line-height: 1.55; }
+.grid :deep(.card .price) { letter-spacing: .02em; margin-top: 2px; }
+.grid :deep(.card .add) {
+  background: transparent; color: var(--primary); border: 1px solid var(--hairline);
+  border-radius: 999px; font-family: var(--sans-strong); font-weight: 600; font-size: 13.5px;
+  letter-spacing: .1em; text-indent: .1em; padding: 10px; margin-top: 9px; transition: .2s;
+}
+.grid :deep(.card .add:hover) {
+  background: linear-gradient(135deg, var(--primary), #659edb); color: #fff;
+  border-color: transparent; box-shadow: 0 8px 16px rgba(43, 108, 184, .24);
+}
+.grid :deep(.card .add:disabled) { background: var(--line); color: var(--muted); border-color: transparent; }
+.grid :deep(.card .fav) { background: rgba(255, 255, 255, .9); box-shadow: 0 2px 8px rgba(30, 60, 110, .1); }
+.grid :deep(.tag-badge) { border-radius: 999px; letter-spacing: .08em; }
+
+.empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 56px 0 64px; }
+.empty .empty-t { font-family: var(--sans-strong); font-weight: 600; font-size: 16px; letter-spacing: .04em; color: var(--text); }
+.empty-tip { font-size: 13px; margin-top: 6px; opacity: .8; }
+
+/* ---------- 分页 ---------- */
+.pager { display: flex; justify-content: center; gap: 9px; margin-top: 34px; }
+.pager button {
+  min-width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font-family: var(--sans-strong);
+  font-weight: 600; font-size: 13px; transition: .18s;
+}
+.pager button:hover:not(:disabled):not(.on) { border-color: var(--primary); color: var(--primary); }
+.pager button.on {
+  background: linear-gradient(135deg, var(--primary), #659edb); color: #fff;
+  border-color: transparent; box-shadow: 0 6px 14px rgba(43, 108, 184, .26);
+}
+.pager button:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ---------- 自适应 ---------- */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-art { order: -1; min-height: 0; height: 240px; padding: 18px 20px; }
+  .hero-art::before { background: none; }
+  .hero-art::after {
+    background: linear-gradient(to top, rgba(8, 22, 42, .93) 0%, rgba(8, 22, 42, .62) 52%, rgba(8, 22, 42, .1) 100%);
+  }
+  .hero-art h3 { font-size: 20px; letter-spacing: .12em; line-height: 1.5; }
+  .rule { margin: 10px 0 0; width: 30px; }
+  .hero-art ul { display: none; }
+  .hero-main { padding: 24px 22px 20px; min-height: 0; }
+  .stage { min-height: 168px; }
+  .scene h1 { font-size: 25px; }
+  .hero-foot { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .grid :deep(.card .thumb) { height: 134px; font-size: 46px; }
+}
+</style>

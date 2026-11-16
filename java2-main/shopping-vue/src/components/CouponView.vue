@@ -40,6 +40,9 @@
         </div>
       </div>
 
+      <!-- 扫雷小游戏：通关送一张券 -->
+      <MineGame />
+
       <!-- 我的优惠券 -->
       <div class="cp-mine">
         <h2>我的优惠券 <small>({{ myCount }})</small></h2>
@@ -61,6 +64,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { store, go, claimCoupon, loadMyCoupons, loadCouponPool, openAuth } from '../store.js'
+import MineGame from './MineGame.vue'
 
 const couponPool = computed(() => store.couponPool)
 const hasGot = (code) => store.myCoupons.includes(code)
