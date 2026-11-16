@@ -7,14 +7,14 @@
       <span class="bubble b3"></span>
     </div>
 
-    <!-- 首屏：左栏雪景插画（与注册页同一张图、同一排版），右栏当季企划轮播 -->
+    <!-- 首屏：左栏插画（与注册页同一个角色、同一排版，换成了街景那张），右栏当季企划轮播 -->
     <!-- 只在「全部商品」时出现；切到数码电子等具体分类就收起，直接进入商品列表 -->
     <Transition name="hero" appear>
       <section v-if="showHero" class="hero" @mouseenter="pause" @mouseleave="resume">
-      <div class="hero-art" :style="{ backgroundImage: 'url(' + heroArt + ')' }">
+      <div class="hero-art" :style="{ backgroundImage: 'url(' + homeHero + ')' }">
         <div class="art-copy">
-          <p class="eyebrow">{{ SHOP_NAME }} · 冬季选品</p>
-          <h3>雪落无声<br />好物有信</h3>
+          <p class="eyebrow">{{ SHOP_NAME }} · 冬季街头</p>
+          <h3>街头新季<br />好物有信</h3>
           <span class="rule"></span>
           <ul>
             <li>千款好物，每日上新</li>
@@ -125,7 +125,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
 import mascotDizzy from '../assets/mascot/dizzy.png'
-import heroArt from '../assets/register-hero.webp'
+import homeHero from '../assets/home-hero.webp'
 import { SHOP_NAME } from '../brand.js'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
@@ -253,30 +253,30 @@ function onBanner(b) {
   position: relative; isolation: isolate;
   display: flex; flex-direction: column; justify-content: flex-end;
   min-height: 424px; padding: 26px 24px 26px; color: #fff;
-  background-color: #a9c8e6; background-position: center 12%; background-size: cover; background-repeat: no-repeat;
+  background-color: #3b4c5f; background-position: center 46%; background-size: cover; background-repeat: no-repeat;
 }
 /* 右缘渐隐成卡片底色，与企划区无缝衔接（与注册页同一手法） */
 .hero-art::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(270deg, var(--card) 0%, transparent 30%);
 }
-/* 底部压暗 + 左侧再压一层，白字压在亮雪上也能读清 */
+/* 这张图上方是霓虹弧线、底部是亮白 T 恤，压暗比雪景那张要更实一点，白字才压得住 */
 .hero-art::after {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
-    linear-gradient(to top, rgba(9, 26, 48, .95) 0%, rgba(9, 26, 48, .74) 40%, rgba(9, 26, 48, .22) 74%, rgba(9, 26, 48, 0) 94%),
-    linear-gradient(90deg, rgba(9, 26, 48, .45) 0%, rgba(9, 26, 48, 0) 64%);
+    linear-gradient(to top, rgba(15, 33, 55, .93) 0%, rgba(15, 33, 55, .82) 20%, rgba(15, 33, 55, .5) 48%, rgba(15, 33, 55, .16) 72%, rgba(15, 33, 55, 0) 90%),
+    linear-gradient(90deg, rgba(15, 33, 55, .46) 0%, rgba(15, 33, 55, .16) 44%, rgba(15, 33, 55, 0) 68%);
 }
 .art-copy { position: relative; z-index: 1; }
 .eyebrow {
-  display: inline-block; font-family: var(--serif); font-size: 11px; letter-spacing: .22em;
+  display: inline-block; font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: .18em;
   color: rgba(255, 255, 255, .94); padding: 5px 12px 5px 14px; border-radius: 999px;
   background: rgba(10, 28, 52, .42); border: 1px solid rgba(255, 255, 255, .26);
   backdrop-filter: blur(4px); margin: 0 0 14px;
 }
 .hero-art h3 {
-  font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1.62;
-  letter-spacing: .16em; text-shadow: 0 2px 14px rgba(4, 16, 34, .6); margin: 0;
+  font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.48;
+  letter-spacing: .04em; text-shadow: 0 2px 16px rgba(6, 18, 34, .55); margin: 0;
 }
 .rule {
   display: block; width: 44px; height: 1px; margin: 16px 0 18px;
@@ -284,7 +284,8 @@ function onBanner(b) {
 }
 .hero-art ul {
   list-style: none; display: flex; flex-direction: column; gap: 10px;
-  font-family: var(--serif); font-size: 13px; letter-spacing: .06em; color: rgba(255, 255, 255, .9);
+  font-family: var(--display); font-weight: 500; font-size: 12.5px; letter-spacing: .04em;
+  color: rgba(255, 255, 255, .92); text-shadow: 0 1px 8px rgba(8, 22, 40, .55);
 }
 .hero-art li { display: flex; align-items: center; gap: 10px; }
 .hero-art li::before {
@@ -304,10 +305,10 @@ function onBanner(b) {
   transition: opacity .55s ease, transform .55s ease; cursor: pointer;
 }
 .scene.active { opacity: 1; transform: none; pointer-events: auto; }
-/* 首屏企划小标：跟着插画走，保留衬线 */
+/* 首屏企划小标：跟着插画走，黑体 + 宽字距当装饰线 */
 .scene-kicker {
-  font-family: var(--serif); font-size: 11px; letter-spacing: .26em; text-transform: uppercase;
-  color: var(--primary); opacity: .82; margin-bottom: 12px;
+  font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--primary); opacity: .85; margin-bottom: 11px;
 }
 /* 首屏以外的区块小标：换成稍粗的黑体，字号抬一点点 */
 .kicker {
@@ -315,13 +316,13 @@ function onBanner(b) {
   text-transform: uppercase; color: var(--primary); opacity: .92; margin-bottom: 12px;
 }
 .scene h1 {
-  font-family: var(--serif); font-weight: 400; font-size: 33px; line-height: 1.45;
-  letter-spacing: .11em; color: var(--text);
+  font-family: var(--display); font-weight: 700; font-size: 32px; line-height: 1.4;
+  letter-spacing: .015em; color: var(--text);
 }
 .scene .lede { margin-top: 12px; font-size: 13.5px; color: var(--muted); letter-spacing: .05em; }
 .scene-tag {
-  margin-top: 18px; font-family: var(--serif); font-size: 12px;
-  letter-spacing: .16em; color: var(--primary); padding: 6px 15px; border-radius: 999px;
+  margin-top: 18px; font-family: var(--display); font-weight: 600; font-size: 12px;
+  letter-spacing: .1em; color: var(--primary); padding: 6px 15px; border-radius: 999px;
   border: 1px solid var(--hairline); background: rgba(43, 108, 184, .05);
 }
 
@@ -331,7 +332,7 @@ function onBanner(b) {
 }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .cta {
-  font-family: var(--serif); font-size: 14px; letter-spacing: .22em; text-indent: .22em;
+  font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .12em; text-indent: .12em;
   padding: 12px 24px; border-radius: 12px; color: #fff;
   background: linear-gradient(135deg, var(--primary), #659edb);
   box-shadow: 0 6px 16px rgba(43, 108, 184, .26); transition: .2s;
@@ -457,20 +458,34 @@ function onBanner(b) {
 
 /* ---------- 自适应 ---------- */
 @media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; }
-  .hero-art { order: -1; min-height: 0; height: 240px; padding: 18px 20px; }
-  .hero-art::before { background: none; }
-  .hero-art::after {
-    background: linear-gradient(to top, rgba(8, 22, 42, .93) 0%, rgba(8, 22, 42, .62) 52%, rgba(8, 22, 42, .1) 100%);
-  }
-  .hero-art h3 { font-size: 20px; letter-spacing: .12em; line-height: 1.5; }
-  .rule { margin: 10px 0 0; width: 30px; }
+  /* 这一档还是左右两栏，只把插画列收窄：竖版插画在这个比例下几乎能整张露出来 */
+  .hero { grid-template-columns: 34% minmax(0, 1fr); }
+  .hero-art { padding: 22px 18px; min-height: 0; background-position: center 16%; }
+  .hero-art h3 { font-size: 21px; line-height: 1.5; }
+  /* 列窄了，四条卖点会把文字块顶到插画脸上去，这一档只留小标 + 标题 */
   .hero-art ul { display: none; }
+  .rule { margin: 12px 0 0; width: 34px; }
   .hero-main { padding: 24px 22px 20px; min-height: 0; }
   .stage { min-height: 168px; }
-  .scene h1 { font-size: 25px; }
+  .scene h1 { font-size: 26px; }
   .hero-foot { flex-direction: column; align-items: flex-start; gap: 14px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
   .grid :deep(.card .thumb) { height: 134px; font-size: 46px; }
+}
+
+@media (max-width: 640px) {
+  /* 手机上是横条，插画自己就把画面占满了，再压字会盖住脸：这里只留图 */
+  .hero { grid-template-columns: 1fr; }
+  .hero-art {
+    order: -1; min-height: 0; height: 280px; padding: 0;
+    background-position: center 12%;
+  }
+  .hero-art::before { background: none; }
+  /* 底部融进卡片，不留硬边 */
+  .hero-art::after {
+    background: linear-gradient(to bottom, rgba(15, 33, 55, .16) 0%, rgba(15, 33, 55, 0) 24%, rgba(15, 33, 55, 0) 70%, var(--card) 100%);
+  }
+  .art-copy { display: none; }
+  .scene h1 { font-size: 24px; }
 }
 </style>

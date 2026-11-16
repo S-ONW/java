@@ -13,6 +13,8 @@
   --hairline:#cfe0f2;
   /* 首屏以外的标题 / 标签用这套黑体，比衬线更实、更有分量（PingFang / 雅黑 都有真正的粗体字重） */
   --sans-strong:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans SC","Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
+  /* 首屏横幅标题：街头潮流感，用重字重黑体 + 紧字距，和街景插画同一种气质 */
+  --display:"HarmonyOS Sans SC","MiSans","Alibaba PuHuiTi 3","Source Han Sans SC","Noto Sans SC","PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
 }
 [data-theme="dark"]{
   --bg:#0e1520; --card:#16202e; --text:#e4ecf6; --muted:#8fa0b6; --line:#263449;
