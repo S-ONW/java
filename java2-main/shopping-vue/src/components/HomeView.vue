@@ -7,14 +7,12 @@
       <span class="bubble b3"></span>
     </div>
 
-    <!-- 首屏：左栏插画（与注册页同一个角色、同一排版，换成了街景那张），右栏当季企划轮播 -->
+    <!-- 首屏：左栏插画（与注册页同一个角色、同一排版，换成了街景那张），右栏精选企划轮播 -->
     <!-- 只在「全部商品」时出现；切到数码电子等具体分类就收起，直接进入商品列表 -->
     <Transition name="hero" appear>
       <section v-if="showHero" class="hero" @mouseenter="pause" @mouseleave="resume">
       <div class="hero-art" :style="{ backgroundImage: 'url(' + homeHero + ')' }">
         <div class="art-copy">
-          <p class="eyebrow">{{ SHOP_NAME }} · 冬季街头</p>
-          <h3>街头新季<br />好物有信</h3>
           <span class="rule"></span>
           <ul>
             <li>千款好物，每日上新</li>
@@ -64,7 +62,7 @@
     <main ref="gridTop">
       <div class="toolbar">
         <div class="head">
-          <p class="kicker">Collection · 当季陈列</p>
+          <p class="kicker">Collection · 精选陈列</p>
           <h2>
             {{ store.cat === 'all' ? '全部商品' : catLabel(store.cat) }}
             <small>{{ total }} 件</small>
@@ -126,7 +124,6 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
 import mascotDizzy from '../assets/mascot/dizzy.png'
 import homeHero from '../assets/home-hero.webp'
-import { SHOP_NAME } from '../brand.js'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
@@ -237,7 +234,7 @@ function onBanner(b) {
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-22px); } }
 [data-theme="dark"] .bubble { opacity: .16; }
 
-/* ---------- 首屏：左雪景 + 右企划 ---------- */
+/* ---------- 首屏：左街景 + 右企划 ---------- */
 .hero {
   display: grid; grid-template-columns: 380px 1fr;
   background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -252,15 +249,18 @@ function onBanner(b) {
 .hero-art {
   position: relative; isolation: isolate;
   display: flex; flex-direction: column; justify-content: flex-end;
-  min-height: 424px; padding: 26px 24px 26px; color: #fff;
+  min-height: 424px; padding: 26px 22px 24px; color: #fff;
   background-color: #3b4c5f; background-position: center 46%; background-size: cover; background-repeat: no-repeat;
+  /* 街景这张图的用色：霓虹红字 + 冷蓝光，插画里的贴纸徽章也走这一套 */
+  --street-red: #ff4a3d;
+  --street-cyan: #7ad4ff;
 }
 /* 右缘渐隐成卡片底色，与企划区无缝衔接（与注册页同一手法） */
 .hero-art::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: linear-gradient(270deg, var(--card) 0%, transparent 30%);
 }
-/* 这张图上方是霓虹弧线、底部是亮白 T 恤，压暗比雪景那张要更实一点，白字才压得住 */
+/* 这张图上方是霓虹弧线、底部是亮白 T 恤，压暗要比一般的插画更实一点，白字才压得住 */
 .hero-art::after {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
@@ -268,29 +268,61 @@ function onBanner(b) {
     linear-gradient(90deg, rgba(15, 33, 55, .46) 0%, rgba(15, 33, 55, .16) 44%, rgba(15, 33, 55, 0) 68%);
 }
 .art-copy { position: relative; z-index: 1; }
+
+/* 小标：按插画里的街牌做成贴纸标签——左边一道霓虹红、右角斜切、整块微微歪着 */
 .eyebrow {
-  display: inline-block; font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: .18em;
-  color: rgba(255, 255, 255, .94); padding: 5px 12px 5px 14px; border-radius: 999px;
-  background: rgba(10, 28, 52, .42); border: 1px solid rgba(255, 255, 255, .26);
-  backdrop-filter: blur(4px); margin: 0 0 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--display); font-weight: 800; font-size: 11px; letter-spacing: .13em;
+  color: #fff; padding: 6px 14px 6px 10px; margin: 0 0 14px;
+  background: rgba(8, 18, 33, .78); border-left: 3px solid var(--street-red);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  transform: rotate(-1.6deg); transform-origin: left bottom;
+  /* clip-path 会把 box-shadow 一起裁掉，这里用 drop-shadow 才留得住外阴影 */
+  filter: drop-shadow(0 6px 14px rgba(4, 12, 26, .5));
 }
+.eyebrow::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--street-red); box-shadow: 0 0 9px rgba(255, 74, 61, .95);
+}
+
+/* 主标题：重字重 + 紧行高，跟霓虹招牌一样硬；第二行做成空心描边，呼应背景里那圈灯管字 */
 .hero-art h3 {
-  font-family: var(--display); font-weight: 700; font-size: 27px; line-height: 1.48;
-  letter-spacing: .04em; text-shadow: 0 2px 16px rgba(6, 18, 34, .55); margin: 0;
+  font-family: var(--display); font-weight: 900; font-size: 32px; line-height: 1.16;
+  letter-spacing: .01em; margin: 0;
+  /* 红字错位的硬阴影 = 印刷套色，比柔和投影更像街头招牌 */
+  text-shadow: 3px 3px 0 rgba(255, 74, 61, .5), 0 12px 26px rgba(4, 14, 30, .75);
 }
+.hero-art h3 .stroke {
+  display: inline-block; margin-top: 5px;
+  font-style: normal; color: transparent; letter-spacing: .05em;
+  -webkit-text-stroke: 2.2px rgba(255, 255, 255, .96);
+  text-shadow: 0 0 24px rgba(122, 212, 255, .7);
+}
+/* 分隔线：斜切的喷漆条，红 / 白 / 冰蓝三段 */
 .rule {
-  display: block; width: 44px; height: 1px; margin: 16px 0 18px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .92), rgba(255, 255, 255, 0));
+  display: block; width: 58px; height: 4px; margin: 14px 0 16px;
+  background: linear-gradient(90deg, var(--street-red) 0 32%, rgba(255, 255, 255, .95) 32% 64%, var(--street-cyan) 64% 100%);
+  transform: skewX(-22deg);
+  box-shadow: 0 0 12px rgba(255, 74, 61, .4);
 }
+/* 卖点：做成夹克上的徽章贴片，一条一个角度，交错贴上去 */
 .hero-art ul {
-  list-style: none; display: flex; flex-direction: column; gap: 10px;
-  font-family: var(--display); font-weight: 500; font-size: 12.5px; letter-spacing: .04em;
-  color: rgba(255, 255, 255, .92); text-shadow: 0 1px 8px rgba(8, 22, 40, .55);
+  list-style: none; display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  font-family: var(--display); font-weight: 700; font-size: 11.5px; letter-spacing: .03em;
+  color: #fff;
 }
-.hero-art li { display: flex; align-items: center; gap: 10px; }
+.hero-art li {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 11px 4px 9px; border-radius: 5px;
+  background: rgba(8, 19, 34, .58); border: 1px solid rgba(255, 255, 255, .32);
+  backdrop-filter: blur(5px); box-shadow: 0 4px 12px rgba(4, 12, 26, .38);
+}
+.hero-art li:nth-child(odd) { transform: rotate(-1.2deg); }
+.hero-art li:nth-child(even) { transform: rotate(1.1deg); }
 .hero-art li::before {
-  content: ''; flex-shrink: 0; width: 4px; height: 4px; border-radius: 50%;
-  background: #fff; box-shadow: 0 0 9px rgba(190, 225, 255, .95);
+  content: ''; flex-shrink: 0; width: 5px; height: 5px; border-radius: 1px;
+  background: var(--street-red); transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(255, 74, 61, .9);
 }
 
 .hero-main {
@@ -461,10 +493,10 @@ function onBanner(b) {
   /* 这一档还是左右两栏，只把插画列收窄：竖版插画在这个比例下几乎能整张露出来 */
   .hero { grid-template-columns: 34% minmax(0, 1fr); }
   .hero-art { padding: 22px 18px; min-height: 0; background-position: center 16%; }
-  .hero-art h3 { font-size: 21px; line-height: 1.5; }
-  /* 列窄了，四条卖点会把文字块顶到插画脸上去，这一档只留小标 + 标题 */
+  /* 列窄了，四条卖点会把文字块顶到插画脸上去，这一档整块文案都收起来 */
   .hero-art ul { display: none; }
-  .rule { margin: 12px 0 0; width: 34px; }
+  /* 卖点收起来后，这条分隔线上面没有字可隔，留着会变成一根孤零零的色条 */
+  .rule { display: none; }
   .hero-main { padding: 24px 22px 20px; min-height: 0; }
   .stage { min-height: 168px; }
   .scene h1 { font-size: 26px; }

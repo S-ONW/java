@@ -55,12 +55,44 @@ npm run dev
   表现为看不到后台按钮，重新登录一次即可**。
 - 改动前端后依旧必须 `npm run build` 并把 dist 同步到 `src/main/resources/static` 与 `target/classes/static` 两处。
 
-## 优惠券约定（2026-11-11 起）
+## 优惠券约定（2026-11-11 起，2026-11-18 改版）
 
-- 优惠券池已**从「前端写死」改为「数据库 coupon 表」**：`coupon` 表存券池（code / title / descp / type / val / min_amount），
+- 优惠券池已**从「前端写死」改为「数据库 coupon 表」**：`coupon` 表存券池
+  （code / title / descp / type / val / min_amount / **source**），
   `user_coupon` 表仍只存「谁领了哪张券」（user_email + coupon_code，唯一约束防重复领取）。
-- 建表 + 种子数据在 `db/schema.sql`（`CREATE TABLE IF NOT EXISTS coupon`）与 `db/data.sql`（`INSERT IGNORE` 6 张券），
-  应用启动自动执行；另外 `sql/shop.sql` 里也有完整的 DROP/CREATE/INSERT dump。
+- **2026-11-18 起领券中心没有「一键领取」的券了**，券只能靠扫雷小游戏发：
+  | 券码 | 条件 | 面值 | 说明 |
+  |---|---|---|---|
+  | `MINE2` | 连续 2 次安全点击都没踩雷 | ¥3 无门槛 | 小额 |
+  | `MINE5` | 连续 5 次安全点击都没踩雷 | ¥8 无门槛 | 稍大额 |
+  | `MINEWIN` | 通关（翻开全部安全格） | ¥20 无门槛 | 大额 |
+  档位配置在 `src/data.js` 的 `MINE_TIERS`，游戏 `MineGame.vue` 与领券中心 `CouponView.vue` 都读它，改档位只改一处。
+  **次数只算用户亲手点下去的格子**：插旗不算、点已翻开的格不算、踩雷那一下不计、空白格自动扩散翻开的也不计
+  （一次点击最多 +1，哪怕扩散开了几十格）。
+- **扫雷专属券不能直接领取**：`coupon.source` = `mine` 表示只能扫雷发奖（`claim` = 页面可直接领，默认值）。
+  - 后端 `POST /api/coupon/claim` 多了 `source` 字段：券是 `mine` 且请求来源不是 `mine` / `admin` 时直接 409 拒绝，
+    所以绕过界面直接调接口也领不到；`admin/grant`（后台发放）走 `admin` 来源，可以补发给指定用户。
+  - 前端 `claimCoupon(code, source)` 同样会拦（券池 `source` + 本地 `MINE_TIERS` 双保险，后端老版本不返回 source 也拦得住）。
+  - 后台「优惠券管理」表格多一列「获取方式」，表单里可切换「页面可直接领取 / 仅扫雷闯关发放」。
+- **新人专享大额券 `NEWBIE50`（¥50 无门槛，`coupon.source = newbie`）**：
+  - 「是不是新人」看 `user.newbie` 字段（`1` = 新注册还没领新人礼，`0` = 老用户 / 已领）。
+    注册接口落 1；老库建列时默认 0，所以升级不会把老用户误判成新人。
+  - 登录成功后 `App.vue` 监听登录态，延迟 600ms 调 `offerNewbieCoupon()`：
+    券池里有 `newbie` 券 + `user.newbie = 1` + 没领过 + 这个账号没看过弹窗（本地标记
+    `shopNewbieShown_<email>`）→ 弹 `NewbieCouponModal.vue`。
+  - 点「立即领取」→ `claimCoupon(code, 'newbie')`；后端 `POST /api/coupon/claim` 会校验
+    `user.newbie = 1`，不满足直接 409；领成功后把 `user.newbie` 置 0，之后登录不再弹。
+  - 点「暂不需要」只记本地标记，**不消耗资格**：领券中心 `CouponView.vue` 顶部仍会显示这张券
+    和「立即领取」按钮（`store.newbieState()` 判断）。老用户（`newbie = 0` 且未领）看不到这张卡，
+    避免出现点不动的死按钮。
+  - 后台「获取方式」新增「新人专享（仅新注册账号可领）」选项；管理员发放走 `admin` 来源，不受新人限制。
+- 旧券 `SAVE20 / WELCOME10 / VIP30 / SAVE50 / FREE5 / PCT30` 已下线：
+  `db/data.sql` 里用 `DELETE` 清掉券池行**和**对应的 `user_coupon` 领取记录（`user_coupon` 表可能不存在，
+  所以用 information_schema + `PREPARE/EXECUTE` 守卫）；`sql/shop.sql` 的 dump 已同步成只留三张新券。
+  `data.js` 的 `COUPONS`（SAVE20 等旧码兜底）已删除，`couponInfo()` 现在只认券池。
+- 建表 + 种子数据在 `db/schema.sql`（`CREATE TABLE IF NOT EXISTS coupon`、`user.newbie` 的幂等 ALTER）与
+  `db/data.sql`（`INSERT IGNORE` 四张券：三张扫雷券 + 一张新人券），应用启动自动执行；
+  另外 `sql/shop.sql` 里也有完整的 DROP/CREATE/INSERT dump。
   `db/schema.sql` 空库/已有库都能直接跑：券池建表放在 user 升级段之前，user 相关的 UPDATE/INSERT 都用
   `PREPARE/EXECUTE` + `@user_tbl_exists` 守卫，空库不会中途报错中断。
 - `type = pct` 时 **val 是「减免比例」**：`0.2` = 减 20% = **8 折**（结算按 `小计 × val` 抵扣）；
@@ -72,6 +104,8 @@ npm run dev
 - 前端：`store.couponPool` 是唯一数据源（领券中心 / 结算抵扣 / 后台优惠券管理共用），
   启动时 `loadCouponPool()` 从 `/api/coupon/pool` 同步；后端不可用时回退 `data.js` 的 `COUPON_POOL`
   与 localStorage（离线模式仍可增删改券，但只存在浏览器本地）。
+- 发券统一走 `claimCoupon(code, source)`（前端已经先判 `myCoupons` 是否含该码，不会重复调接口刷提示）；
+  未登录时游戏不调接口，只提示「登录后自动补发」，登录后由 `MineGame` 的 `watch(store.user)` 把已达成的档位补发一次。
 - 兑换/抵扣逻辑不变：`couponDisc(小计, code)`，门槛不满足返回 0。
 
 ## 品牌名（2026-11-11 起：逸如反掌商城）

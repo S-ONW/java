@@ -101,13 +101,14 @@ public class CouponController {
         }
     }
 
-    /** 领取优惠券 */
+    /** 领取优惠券（source = mine 表示扫雷游戏发奖；扫雷专属券只认这个来源） */
     @PostMapping("/claim")
     public Result<Map<String, Object>> claim(@RequestBody Map<String, String> body) {
         String email = body == null ? null : body.get("email");
         String code = body == null ? null : body.get("code");
+        String source = body == null ? null : body.get("source");
         try {
-            couponService.claim(email, code);
+            couponService.claim(email, code, source);
             return Result.ok("领取成功");
         } catch (CouponService.BusinessException e) {
             return Result.error(409, e.getMessage());

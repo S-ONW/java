@@ -2,9 +2,11 @@ package com.fenglin.springboottest.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fenglin.springboottest.entity.Coupon;
+import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.entity.UserCoupon;
 import com.fenglin.springboottest.mapper.CouponMapper;
 import com.fenglin.springboottest.mapper.UserCouponMapper;
+import com.fenglin.springboottest.mapper.UserMapper;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -27,10 +29,15 @@ public class CouponService {
 
     private final CouponMapper couponMapper;
     private final UserCouponMapper userCouponMapper;
+    private final UserMapper userMapper;
+    private final UserService userService;
 
-    public CouponService(CouponMapper couponMapper, UserCouponMapper userCouponMapper) {
+    public CouponService(CouponMapper couponMapper, UserCouponMapper userCouponMapper,
+                         UserMapper userMapper, UserService userService) {
         this.couponMapper = couponMapper;
         this.userCouponMapper = userCouponMapper;
+        this.userMapper = userMapper;
+        this.userService = userService;
     }
 
     // ==================== 优惠券池 ====================
@@ -96,6 +103,15 @@ public class CouponService {
         c.setType(type);
         c.setVal(val);
         c.setMinAmount(min);
+        // 获取方式：前端显式传了才覆盖（不传时新增走数据库默认 claim，编辑保留原值）
+        //   mine   = 只能由扫雷小游戏达成条件发放
+        //   newbie = 新人专享：登录弹窗 / 领券中心可领，但只有「新注册且还没领过」的用户能领到
+        //   claim  = 任何登录用户都能直接领
+        Object srcRaw = body.get("source");
+        if (srcRaw != null) {
+            String src = str(srcRaw).toLowerCase();
+            c.setSource("mine".equals(src) ? "mine" : "newbie".equals(src) ? "newbie" : "claim");
+        }
 
         // 券码唯一：编辑时排除自身
         Coupon same = findByCode(code);
@@ -151,6 +167,8 @@ public class CouponService {
         // val 统一按「减免比例」存：pct 0.2 → 减 20% →「8 折」；fix 30 →「¥30」
         m.put("amount", pct ? trimNum(Math.round((1 - val) * 100) / 10.0) + " 折" : "¥" + trimNum(val));
         m.put("cond", min > 0 ? "满 " + min + " 可用" : "无门槛");
+        // claim = 页面可直接领；mine = 只能扫雷发奖（前端据此不渲染领取按钮、并拦截直接调用）
+        m.put("source", c.getSource() == null || c.getSource().isBlank() ? "claim" : c.getSource());
         return m;
     }
 
@@ -158,9 +176,15 @@ public class CouponService {
 
     /**
      * 领取优惠券：重复领取抛业务异常。
+     * <p>
+     * source 是领券来源，只有 'mine'（扫雷小游戏达成条件）和 'admin'（后台发放）能领到
+     * 标记为 source='mine' 的扫雷专属券；页面直接领取（'claim' / 不传）一律拒绝。
+     * 标记为 source='newbie' 的新人券则要求账号本身就是「新注册未领过新人礼」（user.newbie = 1），
+     * 领到后自动把 newbie 置 0，之后登录不再弹窗。
+     *
      * @return 领取成功的记录
      */
-    public UserCoupon claim(String userEmail, String couponCode) {
+    public UserCoupon claim(String userEmail, String couponCode, String source) {
         if (userEmail == null || userEmail.isBlank()) {
             throw new BusinessException("请先登录后再领取优惠券");
         }
@@ -169,8 +193,23 @@ public class CouponService {
         }
         String code = couponCode.trim().toUpperCase();
         // 券必须真实存在于券池（coupon 表还没数据时不拦，兼容未建表的旧库）
-        if (!listPool().isEmpty() && findByCode(code) == null) {
+        Coupon coupon = findByCode(code);
+        if (!listPool().isEmpty() && coupon == null) {
             throw new BusinessException("这张优惠券不存在或已下架");
+        }
+        // 扫雷专属券不允许从其他入口直接领取（前端 UI + 这里双重校验）
+        String src = source == null ? "" : source.trim().toLowerCase();
+        if (coupon != null && isMineOnly(coupon) && !"mine".equals(src) && !"admin".equals(src)) {
+            throw new BusinessException("这张券是扫雷闯关奖励，去扫雷小游戏里达成条件才能拿到");
+        }
+        // 新人专享券：只有 newbie = 1（刚注册、还没领过新人礼）的用户能领。
+        // 后台补发（admin）不受这条限制，方便运营手动补券。
+        if (coupon != null && isNewbieOnly(coupon) && !"admin".equals(src)) {
+            User u = userMapper.selectOne(
+                    new LambdaQueryWrapper<User>().eq(User::getEmail, userEmail));
+            if (u == null || u.getNewbie() == null || u.getNewbie() != UserService.NEWBIE_YES) {
+                throw new BusinessException("这张券是新用户专享，仅限刚注册的账号领取");
+            }
         }
         // 先查重，给出更友好的提示（数据库唯一约束作为第二道防线）
         Long count = userCouponMapper.selectCount(
@@ -190,7 +229,26 @@ public class CouponService {
             // 并发下唯一约束兜底
             throw new BusinessException("这张优惠券你已经领过啦");
         }
+        // 领到新人券后把新人标识置 0：之后再登录不会再弹新人礼弹窗
+        if (coupon != null && isNewbieOnly(coupon)) {
+            userService.markNewbieDone(userEmail);
+        }
         return uc;
+    }
+
+    /** 兼容旧调用：等同页面直接领取（source = claim），扫雷券会被拒绝 */
+    public UserCoupon claim(String userEmail, String couponCode) {
+        return claim(userEmail, couponCode, "claim");
+    }
+
+    /** 是否为「只能靠扫雷获得」的券 */
+    private boolean isMineOnly(Coupon c) {
+        return "mine".equalsIgnoreCase(c.getSource());
+    }
+
+    /** 是否为「新人专享」券（登录弹窗 / 领券中心可领，但只对新注册用户开放） */
+    private boolean isNewbieOnly(Coupon c) {
+        return "newbie".equalsIgnoreCase(c.getSource());
     }
 
     /** 查询某用户已领取的优惠券 code 列表 */
@@ -209,10 +267,11 @@ public class CouponService {
 
     /**
      * 管理员发放优惠券：直接给某个用户写入一条已领取记录（重复发放拦截）。
-     * 与普通领券区别：走后台 token 鉴权，不要求「用户本人已登录」。
+     * 与普通领券区别：走后台 token 鉴权，不要求「用户本人已登录」；
+     * source 传 admin，因此管理员可以把扫雷专属券补给指定用户。
      */
     public UserCoupon grant(String userEmail, String couponCode) {
-        return claim(userEmail, couponCode);
+        return claim(userEmail, couponCode, "admin");
     }
 
     /**

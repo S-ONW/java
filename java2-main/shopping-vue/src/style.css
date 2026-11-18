@@ -1,13 +1,13 @@
-/* ============ 逸如反掌商城 · 雪景清冷系（与注册页同一套视觉） ============ */
+/* ============ 逸如反掌商城 · 冷调清爽系（与注册页同一套视觉） ============ */
 :root{
   --primary:#2b6cb8; --primary-dark:#1f5090; --bg:#f0f5fb; --card:#ffffff;
   --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2; --shadow:0 6px 24px rgba(30,60,110,.10);
   --radius:16px; --star:#e8b84b; --ok:#2b6cb8; --header-bg:rgba(248,251,255,.94);
   --blue:#4a90d9; --warn:#e8b84b;
   --accent:#122033;
-  /* 标题字体：宋体 / 衬线，字距略宽——注册页的雪景气质，全站标题统一走这套 */
+  /* 标题字体：宋体 / 衬线，字距略宽——注册页的夜景插画气质，全站标题统一走这套 */
   --serif:"STSong","Songti SC","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
-  /* 整页底色：顶部一段淡蓝雪雾，往下收到极浅的冷白，长页面也不会糊成一片 */
+  /* 整页底色：顶部一段淡蓝雾光，往下收到极浅的冷白，长页面也不会糊成一片 */
   --page-bg:linear-gradient(180deg,#d7e5f5 0,#e9f0fa 360px,#eef4fb 100%);
   --thumb-bg:linear-gradient(160deg,#f9fcff,#e9f1fb);
   --hairline:#cfe0f2;

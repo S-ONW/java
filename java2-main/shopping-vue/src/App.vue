@@ -34,6 +34,7 @@
     <AuthModal v-if="store.modal === 'auth'" />
     <AddrModal v-if="store.modal === 'addr'" />
     <SuccessModal v-if="store.modal === 'success'" />
+    <NewbieCouponModal v-if="store.modal === 'newbie'" />
 
     <!-- 返回顶部 -->
     <button class="to-top" :class="{ show: showToTop }" @click="scrollTop">↑</button>
@@ -45,7 +46,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { store, closeDrawer, loadProducts, loadCouponPool, isAdminUser, adminLogout, go } from './store.js'
+import { store, closeDrawer, loadProducts, loadCouponPool, isAdminUser, adminLogout, go, offerNewbieCoupon } from './store.js'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import HomeView from './components/HomeView.vue'
@@ -62,6 +63,7 @@ import DetailModal from './components/DetailModal.vue'
 import AuthModal from './components/AuthModal.vue'
 import AddrModal from './components/AddrModal.vue'
 import SuccessModal from './components/SuccessModal.vue'
+import NewbieCouponModal from './components/NewbieCouponModal.vue'
 import Toast from './components/Toast.vue'
 import AdminLogin from './components/AdminLogin.vue'
 import AdminView from './components/AdminView.vue'
@@ -78,6 +80,14 @@ watch(isAdminUser, (ok) => {
     adminLogout()
     go('home')
   }
+})
+
+// 新注册用户登录成功后，弹一次「新人专享大额券」。
+// 延后 600ms：让「登录成功」的 toast 与页面切换先落地，弹窗别糊在中间打断。
+// 是否该弹由 store.offerNewbieCoupon() 判断（新人标识 + 没领过 + 没看过弹窗）。
+watch(() => store.user, (u) => {
+  if (!u) return
+  setTimeout(() => offerNewbieCoupon(), 600)
 })
 
 const showToTop = ref(false)

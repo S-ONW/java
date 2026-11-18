@@ -1,7 +1,7 @@
 // 商品/广告/优惠等静态数据，从原 shopping.html 抽取而来
-// 首页首屏企划：文案走注册页的「清冷短句」风格（不用 emoji，靠衬线字与字距撑气质）
+// 首页首屏企划：文案跟街景插画同一个调子——短句、硬字重、不加 emoji
 export const BANNERS = [
-  { en: "Winter Selection · 01", h: "冬物上新，全场五折起", p: "全场低至 5 折 · 顺丰发货 · 七天无理由退换", t: "新人专享 · 满 ¥99 包邮", link: "coupon" },
+  { en: "Street Edit · 01", h: "街头上新，全场五折起", p: "全场低至 5 折 · 顺丰发货 · 七天无理由退换", t: "新人专享 · 满 ¥99 包邮", link: "coupon" },
   { en: "Digital Renewal · 02", h: "数码焕新，静享好声", p: "耳机 / 键盘 / 手表，限时直降", t: "晒单返现 · 最高返 ¥50", link: "cat:数码" },
   { en: "Healthy Living · 03", h: "起居有度，身心皆安", p: "瑜伽 / 运动 / 个护，满 199 减 30", t: "会员双倍积分", link: "cat:运动" },
 ]
@@ -27,21 +27,24 @@ export const PRODUCTS = [
   { id: 18, name: "坚果能量包", desc: "每日坚果 · 30 袋独立装", price: 99, old: 149, cat: "食品", icon: "🥜", hot: 74, rate: 4.5, stock: 42, tag: "折扣", g: ["🥜", "🥥", "🍪"] },
 ]
 
-export const COUPONS = {
-  SAVE20: { type: "pct", val: 0.2, label: "全场 8 折" },
-  WELCOME10: { type: "fix", val: 10, label: "立减 ¥10" },
-  VIP30: { type: "fix", val: 30, label: "VIP 立减 ¥30" },
-}
-
-// 领券中心可领取的优惠券列表（点击首页 Banner 进入「领优惠券」界面）
-// min = 使用门槛（订单商品小计需 >= min 才可用，0 表示无门槛）
+// 券池兜底数据（后端不可用时用这份；正常以数据库 coupon 表为准）：
+//   source = "mine"    → 只能由扫雷游戏达成条件发放，页面上的直接领取会被前端与后端同时拒绝
+//   source = "newbie"  → 新人专享大额券：只有「刚注册、还没领过新人礼」的账号能领，
+//                        新用户登录后会弹窗提示，取消掉也能在领券中心领
 export const COUPON_POOL = [
-  { code: "SAVE20", title: "全场 8 折券", desc: "全场商品通用 · 不限品类", type: "pct", val: 0.2, amount: "8 折", cond: "无门槛", min: 0 },
-  { code: "WELCOME10", title: "新人立减券", desc: "新客专享 · 无门槛立减", type: "fix", val: 10, amount: "¥10", cond: "无门槛", min: 0 },
-  { code: "VIP30", title: "VIP 大额券", desc: "VIP 专享 · 大额立减", type: "fix", val: 30, amount: "¥30", cond: "满 199 可用", min: 199 },
-  { code: "SAVE50", title: "满减狂欢券", desc: "满 299 立减 50", type: "fix", val: 50, amount: "¥50", cond: "满 299 可用", min: 299 },
-  { code: "FREE5", title: "无门槛 5 元券", desc: "下单即减 · 全场通用", type: "fix", val: 5, amount: "¥5", cond: "无门槛", min: 0 },
-  { code: "PCT30", title: "限时 7 折券", desc: "指定专区 7 折优惠", type: "pct", val: 0.3, amount: "7 折", cond: "指定专区", min: 0 },
+  { code: "NEWBIE50", title: "新人专享大额券", desc: "新用户专享 · 无门槛立减 50 元", type: "fix", val: 50, amount: "¥50", cond: "无门槛", min: 0, source: "newbie" },
+  { code: "MINE2", title: "扫雷新手券", desc: "连点 2 次不踩雷 · 无门槛立减", type: "fix", val: 3, amount: "¥3", cond: "无门槛", min: 0, source: "mine" },
+  { code: "MINE5", title: "扫雷进阶券", desc: "连点 5 次不踩雷 · 无门槛立减", type: "fix", val: 8, amount: "¥8", cond: "无门槛", min: 0, source: "mine" },
+  { code: "MINEWIN", title: "扫雷通关券", desc: "通关奖励 · 无门槛立减", type: "fix", val: 20, amount: "¥20", cond: "无门槛", min: 0, source: "mine" },
+]
+
+// 扫雷与优惠券的联动档位：need = 需要连续安全点击的次数（0 表示「通关」这一档）。
+// 次数只算用户亲手点的格子，空白格自动扩散翻开的不计入。
+// 游戏、领券中心的奖励列表都读这份配置，改档位只改这里。
+export const MINE_TIERS = [
+  { code: "MINE2", need: 2, label: "连点 2 次", hint: "第 2 次点击仍然没踩雷" },
+  { code: "MINE5", need: 5, label: "连点 5 次", hint: "第 5 次点击仍然没踩雷" },
+  { code: "MINEWIN", need: 0, label: "通关", hint: "把全部安全格翻开" },
 ]
 
 export const REVIEW_POOL = [

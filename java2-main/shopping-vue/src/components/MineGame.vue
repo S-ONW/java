@@ -6,8 +6,8 @@
         <p class="mg-kicker">Mini Game · 扫雷赢券</p>
         <h2>扫雷闯关</h2>
         <p class="mg-sub">
-          点格子排雷，把 {{ grid.rows * grid.cols - grid.mines }} 个安全格全部翻开即通关，
-          通关后自动送一张优惠券到「我的优惠券」。
+          点格子排雷，把 {{ grid.rows * grid.cols - grid.mines }} 个安全格全部翻开即通关。
+          连点 2 次、连点 5 次、通关，各解锁一张无门槛券，达成即刻发到「我的优惠券」。
         </p>
       </div>
       <div class="mg-levels">
@@ -87,21 +87,32 @@
       <!-- 右：奖励与玩法 -->
       <aside class="mg-side">
         <div class="mg-prize">
-          <p class="mg-side-k">通关奖励</p>
-          <div class="mg-prize-card" v-if="rewardCoupon">
-            <div class="mg-prize-amt">
-              <b>{{ rewardCoupon.amount }}</b>
-              <i>{{ rewardCoupon.type === 'pct' ? '折扣' : '立减' }}</i>
-            </div>
-            <div class="mg-prize-bd">
-              <p class="mg-prize-title">{{ rewardCoupon.title }}</p>
-              <small>{{ rewardCoupon.desc || '全场通用' }} · {{ rewardCoupon.cond }}</small>
-            </div>
-          </div>
-          <p v-else class="mg-prize-empty">券池暂时空了，等补券后再来挑战～</p>
-          <p class="mg-prize-tip">
-            {{ wonBefore ? '这张奖励券你已经领过了，重复通关只记成绩。' : '通关后自动放进「我的优惠券」，每位用户限领一张。' }}
+          <p class="mg-side-k">闯关奖励 · 全部无门槛</p>
+          <ul class="mg-tier-list">
+            <li
+              v-for="t in tiers"
+              :key="t.code"
+              class="mg-tier"
+              :class="{ got: owned(t.code), reached: t.need && clicks >= t.need && !owned(t.code) }"
+            >
+              <span class="mg-tier-amt">{{ t.coupon ? t.coupon.amount : '—' }}</span>
+              <span class="mg-tier-bd">
+                <b>{{ t.coupon ? t.coupon.title : '券池待补' }}</b>
+                <small>{{ t.label }}{{ t.coupon ? ' · ' + t.coupon.cond : '' }}</small>
+              </span>
+              <span class="mg-tier-st">{{ tierState(t) }}</span>
+            </li>
+          </ul>
+
+          <p v-if="notice" class="mg-unlock">🎉 {{ notice }}</p>
+          <p v-if="!over" class="mg-progress">
+            本局已安全点击 <b>{{ clicks }}</b> 次<template v-if="nextNeed"> · 再点 {{ nextNeed }} 次还有券</template>
           </p>
+          <p v-if="!store.user" class="mg-login-tip">
+            还没登录，奖励先记着 ——
+            <button class="mg-link" @click="loginNow">登录后自动补发</button>
+          </p>
+          <p class="mg-prize-tip">{{ sideTip }}</p>
         </div>
 
         <div class="mg-rules">
@@ -110,7 +121,9 @@
             <li>第一次点开的格子一定安全，雷在首点之后才埋。</li>
             <li>数字表示它周围八格里埋了几颗雷。</li>
             <li>右键（或开「标记模式」后点击）插旗，标记你认定的雷。</li>
-            <li>翻开全部安全格即通关；点中雷则本局结束。</li>
+            <li>连点 2 次不踩雷得小额券，连点 5 次得中额券，通关再得大额券。</li>
+            <li>只算你自己点下去的格子，空白格自动扩散翻开的那些不计入次数。</li>
+            <li>踩雷本局结束，点击次数清零，重新开局再来一次。</li>
           </ol>
         </div>
       </aside>
@@ -119,8 +132,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { store, claimCoupon, openAuth } from '../store.js'
+import { MINE_TIERS } from '../data.js'
 
 // ---------- 难度：格子太大不好玩，太大又放不下，就这两档 ----------
 const GRIDS = {
@@ -139,6 +153,8 @@ const time = ref(0)
 const flagMode = ref(false)  // 手机上没有右键，用一个开关切换「点=插旗」
 const rewardText = ref('')
 const needLogin = ref(false)
+const clicks = ref(0)        // 本局「安全点击」次数：只算亲手点的格子，扩散翻开的不算，插旗 / 踩雷也不计
+const notice = ref('')       // 局中解锁提示（连点 2 次 / 5 次时弹一行）
 let timer = null
 
 const flagCount = computed(() => cells.value.filter((c) => c.flag).length)
@@ -164,6 +180,8 @@ function reset() {
   flagMode.value = false
   rewardText.value = ''
   needLogin.value = false
+  clicks.value = 0
+  notice.value = ''
   build()
 }
 
@@ -236,6 +254,9 @@ function reveal(i) {
     startTimer()
   }
   if (cell.mine) { boom(i); return }
+  // 只有用户亲手点的这一下才算一次「安全点击」：踩雷那一下本局就结束，不计数；
+  // 下面空白格自动扩散翻开的格子也不计数（一次点击最多 +1）。
+  clicks.value++
   // 空白格自动向外扩散，遇到数字格停下
   const stack = [i]
   while (stack.length) {
@@ -250,6 +271,7 @@ function reveal(i) {
       })
     }
   }
+  grantReached()
   checkWin()
 }
 
@@ -257,19 +279,36 @@ function boom(i) {
   over.value = true
   win.value = false
   stopTimer()
+  // 踩雷即失败：本局一次奖励都不再发，进度条也不再往前
+  notice.value = ''
   cells.value[i].boom = true
   cells.value.forEach((c) => {
     if (c.mine) { c.open = true; c.flag = false }
   })
 }
 
-function checkWin() {
+async function checkWin() {
   const safeTotal = grid.value.rows * grid.value.cols - grid.value.mines
   if (openedCount.value < safeTotal) return
   over.value = true
   win.value = true
   stopTimer()
-  grantReward()
+  const t = winTier.value
+  const c = t && t.coupon
+  if (!c) { rewardText.value = '通关！不过券池暂时是空的，等补券了再来一局～'; return }
+  if (!store.user) {
+    rewardText.value = `通关！登录后就能领「${c.title}」${c.amount}`
+    needLogin.value = true
+    return
+  }
+  if (owned(c.code)) {
+    rewardText.value = '通关！这张通关券你之前已经领过了，本次只记成绩'
+    return
+  }
+  const ok = await claimCoupon(c.code, 'mine')
+  rewardText.value = ok === true
+    ? `通关！「${c.title}」${c.amount} 已放入我的优惠券`
+    : '通关！奖励发放失败，稍后重新开局再试一次'
 }
 
 // ---------- 计时 ----------
@@ -282,32 +321,64 @@ function stopTimer() {
 }
 onUnmounted(stopTimer)
 
-// ---------- 通关奖励：自动领一张券 ----------
-// 优先拿券池里的无门槛 5 元券（FREE5），没有就用券池第一张
-const rewardCoupon = computed(() => {
-  const pool = store.couponPool || []
-  return pool.find((c) => c.code === 'FREE5') || pool[0] || null
-})
-const wonBefore = computed(() => !!(rewardCoupon.value && store.myCoupons.includes(rewardCoupon.value.code)))
+// ---------- 扫雷 × 优惠券：连续 2 次 / 5 次安全点击 / 通关，各发一张无门槛券 ----------
+// 次数只统计用户亲手点的格子，空白格自动扩散翻开的不计入。
+// 档位配置在 data.js 的 MINE_TIERS，券面信息来自券池（数据库 coupon 表）。
+const tiers = computed(() =>
+  MINE_TIERS.map((t) => ({
+    ...t,
+    coupon: (store.couponPool || []).find((c) => c.code === t.code) || null,
+  }))
+)
+const winTier = computed(() => tiers.value.find((t) => t.code === 'MINEWIN') || null)
+const owned = (code) => store.myCoupons.includes(code)
 
-async function grantReward() {
-  const c = rewardCoupon.value
-  needLogin.value = false
-  if (!c) { rewardText.value = '通关！不过券池暂时是空的，等补券了再来一局～'; return }
-  if (!store.user) {
-    rewardText.value = `通关！登录后就能领「${c.title}」`
-    needLogin.value = true
-    return
+// 距离下一档还差几次（没有可解锁的档位就是 0）
+const nextNeed = computed(() => {
+  const t = tiers.value
+    .filter((x) => x.need && !owned(x.code) && x.need > clicks.value)
+    .sort((a, b) => a.need - b.need)[0]
+  return t ? t.need - clicks.value : 0
+})
+
+const sideTip = computed(() => {
+  if (!store.user) return '登录后奖励自动发放，每人每张限领一次。'
+  if (tiers.value.length && tiers.value.every((t) => owned(t.code))) {
+    return '三张扫雷券你都收齐了，重复闯关只记成绩。'
   }
-  if (store.myCoupons.includes(c.code)) {
-    rewardText.value = '通关！这张奖励券你之前已经领过了，本次只记成绩'
-    return
-  }
-  const ok = await claimCoupon(c.code)
-  rewardText.value = ok === true
-    ? `通关！「${c.title}」已放入我的优惠券`
-    : '通关！奖励券领取失败，可在上方手动领取'
+  return '达成条件即刻发券，自动放进「我的优惠券」，每人每张限领一次。'
+})
+
+function tierState(t) {
+  if (owned(t.code)) return '已领取'
+  if (t.need === 0) return '通关可得'
+  if (clicks.value >= t.need) return store.user ? '已达成' : '待登录'
+  return `还差 ${t.need - clicks.value} 次`
 }
+
+// 发一张：已领过、没登录都不打扰用户（没登录的等登录后由 watch 补发）
+// 第二个参数 'mine' 是来源标记：后端只允许扫雷游戏领这类券，页面直接领取会被拒绝
+async function grantTier(t) {
+  if (!t || !t.coupon || owned(t.code) || !store.user) return false
+  const ok = await claimCoupon(t.coupon.code, 'mine')
+  if (ok === true) notice.value = `解锁「${t.coupon.title}」${t.coupon.amount}，已放入我的优惠券`
+  return ok === true
+}
+
+// 每点一次都检查：命中 2 次 / 5 次就当场发券
+function grantReached() {
+  tiers.value.filter((t) => t.need && clicks.value >= t.need).forEach((t) => grantTier(t))
+}
+
+// 中途没登录、玩到一半才登录的情况：登录后把已达成的档位补发一次
+watch(
+  () => store.user,
+  (u) => {
+    if (!u) return
+    if (over.value) { if (win.value) grantTier(winTier.value); return }
+    grantReached()
+  }
+)
 
 function loginNow() { openAuth('login') }
 
@@ -460,21 +531,45 @@ reset()
   font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
   color: var(--muted); font-weight: 600; margin-bottom: 10px;
 }
-.mg-prize-card {
-  display: flex; align-items: stretch; gap: 0; overflow: hidden;
+/* 三档奖励：面值块 + 名称 + 状态，已领取整行压暗，刚达成的一行描边高亮 */
+.mg-tier-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.mg-tier {
+  display: flex; align-items: center; gap: 12px;
   border: 1px solid var(--hairline); border-radius: 12px; background: var(--card);
+  padding: 10px 12px; transition: border-color .18s, box-shadow .18s, opacity .18s;
 }
-.mg-prize-amt {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; padding: 14px 18px; min-width: 96px;
-  background: linear-gradient(160deg, var(--primary), var(--primary-dark)); color: #fff;
+.mg-tier-amt {
+  flex-shrink: 0; min-width: 60px; text-align: center;
+  font-size: 17px; font-weight: 800; color: var(--primary);
+  background: rgba(74, 144, 217, .1); border-radius: 8px; padding: 6px 8px;
 }
-.mg-prize-amt b { font-size: 19px; font-weight: 800; }
-.mg-prize-amt i { font-size: 10.5px; font-style: normal; opacity: .85; }
-.mg-prize-bd { padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-.mg-prize-title { font-size: 14px; font-weight: 600; }
-.mg-prize-bd small { font-size: 11.5px; color: var(--muted); }
-.mg-prize-empty { font-size: 12.5px; color: var(--muted); }
+.mg-tier-bd { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mg-tier-bd b { font-size: 13.5px; font-weight: 600; }
+.mg-tier-bd small { font-size: 11.5px; color: var(--muted); }
+.mg-tier-st {
+  flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+/* 本局刚达成、还没发下去（没登录）的那一档 */
+.mg-tier.reached { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(43, 108, 184, .1); }
+.mg-tier.reached .mg-tier-st { color: var(--primary); border-color: var(--primary); }
+.mg-tier.got { opacity: .72; }
+.mg-tier.got .mg-tier-amt { color: var(--muted); background: var(--bg); }
+.mg-tier.got .mg-tier-st { color: #2f855a; border-color: rgba(47, 133, 90, .35); background: rgba(47, 133, 90, .08); }
+[data-theme="dark"] .mg-tier.got .mg-tier-st { color: #68d391; border-color: rgba(104, 211, 145, .35); background: rgba(104, 211, 145, .1); }
+
+.mg-unlock {
+  margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--primary);
+  background: rgba(74, 144, 217, .1); border: 1px dashed rgba(74, 144, 217, .42);
+  border-radius: 10px; padding: 7px 11px; animation: mgIn .2s ease;
+}
+.mg-progress { margin-top: 10px; font-size: 12px; color: var(--text); }
+.mg-progress b { color: var(--primary); font-size: 14px; }
+.mg-login-tip { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+.mg-link {
+  background: none; border: none; padding: 0; font-family: inherit; font-size: inherit;
+  color: var(--primary); font-weight: 600; text-decoration: underline; cursor: pointer;
+}
 .mg-prize-tip { margin-top: 8px; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
 
 .mg-rules ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }

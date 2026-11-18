@@ -23,6 +23,9 @@ public class UserService {
     public static final int PERMISSION_DEFAULT = 1;
     /** 管理员权限 */
     public static final int PERMISSION_ADMIN = 0;
+    /** 新人标识：1 = 新注册、还没领新人券；0 = 老用户 / 已领过 */
+    public static final int NEWBIE_YES = 1;
+    public static final int NEWBIE_NO = 0;
 
     private final UserMapper userMapper;
 
@@ -46,6 +49,8 @@ public class UserService {
         u.setNick(nick);
         u.setPassword(pwd);                            // 明文入库，不加密
         u.setPermission(PERMISSION_DEFAULT);          // 注册用户 = 默认权限 1
+        // 新注册 = 新人：登录后前端会弹「新人专享大额券」，领到券后自动置 0
+        u.setNewbie(NEWBIE_YES);
         u.setCreateTime(LocalDateTime.now());
         userMapper.insert(u);
         u.setPassword(null); // 不返回密码
@@ -64,10 +69,25 @@ public class UserService {
         if (!Objects.equals(u.getPassword(), pwd)) {   // 明文直接比对
             throw new BusinessException("密码错误");
         }
-        // 老数据没有 permission 字段值时按默认权限处理
+        // 老数据没有 permission / newbie 字段值时按默认值处理
         if (u.getPermission() == null) u.setPermission(PERMISSION_DEFAULT);
+        if (u.getNewbie() == null) u.setNewbie(NEWBIE_NO);
         u.setPassword(null);
         return u;
+    }
+
+    /**
+     * 领到新人券后把新人标识置 0：之后再登录就不会再弹新人礼弹窗。
+     * @return 是否真的更新了一行（用户不存在 / 已经是 0 时返回 false）
+     */
+    public boolean markNewbieDone(String email) {
+        if (email == null || email.isBlank()) return false;
+        User u = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getEmail, email.trim()));
+        if (u == null || u.getNewbie() == null || u.getNewbie() == NEWBIE_NO) return false;
+        u.setNewbie(NEWBIE_NO);
+        userMapper.updateById(u);
+        return true;
     }
 
     /** 业务异常 */

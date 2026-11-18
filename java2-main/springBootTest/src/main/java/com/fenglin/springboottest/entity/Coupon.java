@@ -39,6 +39,12 @@ public class Coupon {
     /** 使用门槛：订单商品小计 >= 该值才可用，0 表示无门槛 */
     private Integer minAmount;
 
+    /**
+     * 获取方式：claim = 页面可直接领取；mine = 只能由扫雷小游戏达成条件发放（禁止直接领取）。
+     * 默认 claim，扫雷奖励券标记为 mine。
+     */
+    private String source;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 
@@ -58,6 +64,8 @@ public class Coupon {
     public void setVal(Double val) { this.val = val; }
     public Integer getMinAmount() { return minAmount; }
     public void setMinAmount(Integer minAmount) { this.minAmount = minAmount; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }

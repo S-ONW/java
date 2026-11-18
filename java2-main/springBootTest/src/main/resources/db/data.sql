@@ -20,12 +20,42 @@ INSERT IGNORE INTO product (id, name, descp, price, old_price, cat, icon, hot, r
 (17, '精华护肤套装',   '水乳精华三步曲 · 礼盒',            299, 429, '美妆', '🧖', 79, 4.8, 16, '新品', '🧖,✨,🎀'),
 (18, '坚果能量包',     '每日坚果 · 30 袋独立装',            99, 149, '食品', '🥜', 74, 4.5, 42, '折扣', '🥜,🥥,🍪');
 
--- 优惠券池种子数据：原来写死在前端 data.js 的 COUPON_POOL，现已改为存库。
+-- 优惠券池种子数据（2026-11-18 起）：
+--   1）扫雷闯关奖励（source = 'mine'，只能由游戏发奖，页面直接领取会被后端拒绝）：
+--        连点 2 次不踩雷 → MINE2   ¥3 （小额）
+--        连点 5 次不踩雷 → MINE5   ¥8 （稍大额）
+--        通关（翻开全部安全格）→ MINEWIN ¥20（大额）
+--   2）新人专享大额券（source = 'newbie'）：
+--        NEWBIE50 ¥50 无门槛，只有 user.newbie = 1（刚注册、还没领过新人礼）的账号能领；
+--        登录后弹窗领取，取消掉也能在领券中心领；领到后 user.newbie 自动置 0。
+-- 次数只统计用户亲手点击的格子，空白格自动扩散翻开的不计入。
 -- 使用 INSERT IGNORE，重复启动不会插入重复券码；后台增删改直接落这张表。
-INSERT IGNORE INTO coupon (code, title, descp, type, val, min_amount) VALUES
-('SAVE20',    '全场 8 折券',   '全场商品通用 · 不限品类', 'pct', 0.2, 0),
-('WELCOME10', '新人立减券',    '新客专享 · 无门槛立减',   'fix', 10,  0),
-('VIP30',     'VIP 大额券',    'VIP 专享 · 大额立减',     'fix', 30,  199),
-('SAVE50',    '满减狂欢券',    '满 299 立减 50',          'fix', 50,  299),
-('FREE5',     '无门槛 5 元券', '下单即减 · 全场通用',     'fix', 5,   0),
-('PCT30',     '限时 7 折券',   '指定专区 7 折优惠',       'pct', 0.3, 0);
+INSERT IGNORE INTO coupon (code, title, descp, type, val, min_amount, source) VALUES
+('MINE2',    '扫雷新手券',     '扫雷连点 2 次 · 无门槛立减',   'fix', 3,  0, 'mine'),
+('MINE5',    '扫雷进阶券',     '扫雷连点 5 次 · 无门槛立减',   'fix', 8,  0, 'mine'),
+('MINEWIN',  '扫雷通关券',     '扫雷通关奖励 · 无门槛立减',    'fix', 20, 0, 'mine'),
+('NEWBIE50', '新人专享大额券', '新用户专享 · 无门槛立减 50 元', 'fix', 50, 0, 'newbie');
+
+-- 老库里这几张券可能已经存在（source 默认 claim），INSERT IGNORE 不会覆盖，这里补一次。
+UPDATE coupon SET source = 'mine', descp = '扫雷连点 2 次 · 无门槛立减' WHERE code = 'MINE2';
+UPDATE coupon SET source = 'mine', descp = '扫雷连点 5 次 · 无门槛立减' WHERE code = 'MINE5';
+UPDATE coupon SET source = 'mine' WHERE code = 'MINEWIN';
+UPDATE coupon SET source = 'newbie', title = '新人专享大额券',
+       descp = '新用户专享 · 无门槛立减 50 元', val = 50, min_amount = 0
+ WHERE code = 'NEWBIE50';
+
+-- 下线原先把「点一下就能领」的 6 张券：SAVE20 / WELCOME10 / VIP30 / SAVE50 / FREE5 / PCT30。
+-- 必须用 DELETE：老库里这些行早就存在，只是不再 INSERT 是删不掉的。
+-- user_coupon 里的领取记录一并清掉，否则「我的优惠券」里会留下查不到券面的空记录。
+-- user_coupon 表只在完整 dump（sql/shop.sql）里建，空库时可能不存在，
+-- 所以沿用 schema.sql 的写法：先查 information_schema，再用动态 SQL 兜底。
+SET @uc_tbl_exists = (SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_coupon');
+SET @del_uc_sql = IF(@uc_tbl_exists = 1,
+    'DELETE FROM user_coupon WHERE coupon_code IN (''SAVE20'',''WELCOME10'',''VIP30'',''SAVE50'',''FREE5'',''PCT30'')',
+    'SELECT 1');
+PREPARE del_uc FROM @del_uc_sql;
+EXECUTE del_uc;
+DEALLOCATE PREPARE del_uc;
+
+DELETE FROM coupon WHERE code IN ('SAVE20', 'WELCOME10', 'VIP30', 'SAVE50', 'FREE5', 'PCT30');

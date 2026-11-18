@@ -2,11 +2,11 @@
   <div class="page">
     <div class="wrap">
       <div class="reg-hero">
-        <!-- 左侧雪景插画（登录 / 注册两页统一放左边） -->
-        <div class="reg-art" role="img" aria-label="冬日雪景插画">
+        <!-- 左侧夜景插画（登录 / 注册两页统一放左边） -->
+        <div class="reg-art" role="img" aria-label="夜晚街灯插画">
           <div class="art-copy">
             <p class="art-eyebrow">加入{{ SHOP_NAME }}</p>
-            <h3>雪落无声<br />好物有信</h3>
+            <h3>长街有灯<br />好物有信</h3>
             <span class="art-rule"></span>
             <ul>
               <li>千款好物，每日上新</li>
@@ -202,7 +202,7 @@ function toLogin() { go('login') }
 
 <style scoped>
 .reg-hero{
-  /* 标题/侧栏走宋体（清冷、留白、字距略宽），与雪景插画的气质对齐；表单控件仍用无衬线保证可读 */
+  /* 标题/侧栏走宋体（清冷、留白、字距略宽），与夜景插画的气质对齐；表单控件仍用无衬线保证可读 */
   --serif:"STSong","Songti SC","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
   display:grid;grid-template-columns:340px 1fr;gap:0;
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -250,7 +250,7 @@ function toLogin() { go('login') }
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
 
-/* ---------- 左侧雪景插画栏 ---------- */
+/* ---------- 左侧夜景插画栏 ---------- */
 .reg-art{
   position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:580px;padding:34px 28px 30px;color:#fff;
@@ -261,7 +261,7 @@ function toLogin() { go('login') }
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(270deg,var(--card) 0%,transparent 34%);
 }
-/* 底部压暗，保证白色文字在任何雪花噪点上都能读清 */
+/* 底部压暗，保证白色文字在画面噪点上都能读清 */
 .reg-art::after{
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(to top,rgba(10,28,52,.90) 0%,rgba(10,28,52,.60) 32%,rgba(10,28,52,0) 64%);

@@ -10,7 +10,7 @@
   --text:#1a2433; --muted:#7c8aa0; --line:#dfe8f2;
   --shadow:0 6px 24px rgba(30,60,110,.12); --radius:16px;
   --ok:#2b6cb8; --warn:#e8b84b;
-  /* 与雪景插画配套的标题字体：宋体 / 衬线，字距略宽 */
+  /* 与夜景插画配套的标题字体：宋体 / 衬线，字距略宽 */
   --serif:"STSong","Songti SC","Noto Serif SC","Source Han Serif SC","SimSun",Georgia,"Times New Roman",serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -93,7 +93,7 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 .to-login{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
 .to-login a{color:var(--primary);cursor:pointer;font-weight:600}
 
-/* ---- 左侧雪景插画栏 ---- */
+/* ---- 左侧夜景插画栏 ---- */
 .side{
   position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:520px;padding:32px 26px;color:#fff;
@@ -104,7 +104,7 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(270deg,var(--card) 0%,transparent 34%);
 }
-/* 底部压暗，保证白字在雪景上也能读清 */
+/* 底部压暗，保证白字在画面噪点上也能读清 */
 .side::after{
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
   background:linear-gradient(to top,rgba(10,28,52,.90) 0%,rgba(10,28,52,.60) 32%,rgba(10,28,52,0) 64%);
@@ -162,11 +162,11 @@ em.lv1{color:var(--primary)}em.lv2{color:var(--warn)}em.lv3{color:var(--ok)}
 <div class="bubble b3"></div>
 
 <div class="card" id="card">
-  <!-- 左侧雪景插画（登录 / 注册两页统一放左边） -->
+  <!-- 左侧夜景插画（登录 / 注册两页统一放左边） -->
   <div class="side">
     <div class="side-art">
       <p class="eyebrow">加入逸如反掌商城</p>
-      <h3>雪落无声<br />好物有信</h3>
+      <h3>长街有灯<br />好物有信</h3>
       <span class="rule"></span>
       <ul>
         <li>千款好物，每日上新</li>

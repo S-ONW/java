@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 11/11/2026 09:54:49
+ Date: 18/11/2026 09:55:00
 */
 
 SET NAMES utf8mb4;
@@ -30,20 +30,18 @@ CREATE TABLE `coupon`  (
   `val` double NOT NULL DEFAULT 0 COMMENT '面值：pct 为减免比例（0.2=减20%即8折），fix 为立减金额（元）',
   `min_amount` int NOT NULL DEFAULT 0 COMMENT '使用门槛（订单小计 >= 该值可用，0=无门槛）',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `source` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'claim' COMMENT '获取方式：claim=可直接领，mine=仅扫雷发奖',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_coupon_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 60 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券池表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 108 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券池表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of coupon
 -- ----------------------------
-INSERT INTO `coupon` VALUES (1, 'SAVE20', '全场 8 折券', '全场商品通用 · 不限品类', 'pct', 0.2, 0, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (2, 'WELCOME10', '新人立减券', '新客专享 · 无门槛立减', 'fix', 10, 0, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (3, 'VIP30', 'VIP 大额券', 'VIP 专享 · 大额立减', 'fix', 30, 199, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (4, 'SAVE50', '满减狂欢券', '满 299 立减 50', 'fix', 50, 299, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (5, 'FREE5', '无门槛 5 元券', '下单即减 · 全场通用', 'fix', 5, 0, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (6, 'PCT30', '限时 7 折券', '指定专区 7 折优惠', 'pct', 0.3, 0, '2026-11-11 08:56:41');
-INSERT INTO `coupon` VALUES (53, 'SSS', '满100减20', '', 'fix', 20, 100, '2026-11-11 09:10:11');
+INSERT INTO `coupon` VALUES (66, 'MINE2', '扫雷新手券', '扫雷连点 2 次 · 无门槛立减', 'fix', 3, 0, '2026-11-18 09:05:15', 'mine');
+INSERT INTO `coupon` VALUES (67, 'MINE5', '扫雷进阶券', '扫雷连点 5 次 · 无门槛立减', 'fix', 8, 0, '2026-11-18 09:05:15', 'mine');
+INSERT INTO `coupon` VALUES (68, 'MINEWIN', '扫雷通关券', '扫雷通关奖励 · 无门槛立减', 'fix', 20, 0, '2026-11-18 09:05:15', 'mine');
+INSERT INTO `coupon` VALUES (84, 'NEWBIE50', '新人专享大额券', '新用户专享 · 无门槛立减 50 元', 'fix', 50, 0, '2026-11-18 09:36:59', 'newbie');
 
 -- ----------------------------
 -- Table structure for product
@@ -99,18 +97,20 @@ CREATE TABLE `user`  (
   `password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码（明文存储，不加密）',
   `permission` tinyint NOT NULL DEFAULT 1 COMMENT '权限：1=默认权限，0=管理员权限',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  `newbie` tinyint NOT NULL DEFAULT 0 COMMENT '新人标识：1=新注册未领新人券，0=老用户/已领',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_email`(`email` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', 1, '2026-11-09 11:15:22');
-INSERT INTO `user` VALUES (2, 'admin@shop.local', 'admin', 'admin123', 0, '2026-11-09 11:15:22');
-INSERT INTO `user` VALUES (3, 'dd@shop.local', 'dd', '123456', 1, '2026-11-09 11:43:14');
-INSERT INTO `user` VALUES (4, 'ww@shop.local', 'ww', '123456', 1, '2026-11-09 11:52:56');
-INSERT INTO `user` VALUES (5, 'aa@shop.local', 'aa', '123456', 1, '2026-11-10 00:32:27');
+INSERT INTO `user` VALUES (1, 'demo@qq.com', '演示用户', '123456', 1, '2026-11-09 11:15:22', 0);
+INSERT INTO `user` VALUES (2, 'admin@shop.local', 'admin', 'admin123', 0, '2026-11-09 11:15:22', 0);
+INSERT INTO `user` VALUES (3, 'dd@shop.local', 'dd', '123456', 1, '2026-11-09 11:43:14', 0);
+INSERT INTO `user` VALUES (4, 'ww@shop.local', 'ww', '123456', 1, '2026-11-09 11:52:56', 0);
+INSERT INTO `user` VALUES (5, 'aa@shop.local', 'aa', '123456', 1, '2026-11-10 00:32:27', 0);
+INSERT INTO `user` VALUES (10, 'rr@shop.local', 'rr', '123456', 1, '2026-11-18 09:51:16', 1);
 
 -- ----------------------------
 -- Table structure for user_coupon
@@ -123,11 +123,16 @@ CREATE TABLE `user_coupon`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_coupon
 -- ----------------------------
-INSERT INTO `user_coupon` VALUES (3, 'ww@shop.local', 'VIP30', '2026-11-09 11:53:04');
+INSERT INTO `user_coupon` VALUES (23, 'admin@shop.local', 'MINE2', '2026-11-18 09:16:53');
+INSERT INTO `user_coupon` VALUES (24, 'dd@shop.local', 'MINE2', '2026-11-18 09:17:04');
+INSERT INTO `user_coupon` VALUES (25, 'demo@shop.local', 'MINE2', '2026-11-18 09:26:03');
+INSERT INTO `user_coupon` VALUES (26, 'ww@shop.local', 'MINE2', '2026-11-18 09:31:51');
+INSERT INTO `user_coupon` VALUES (27, 'ww@shop.local', 'MINE5', '2026-11-18 09:32:05');
+INSERT INTO `user_coupon` VALUES (31, 'admin@shop.local', 'MINE5', '2026-11-18 09:45:28');
 
 SET FOREIGN_KEY_CHECKS = 1;

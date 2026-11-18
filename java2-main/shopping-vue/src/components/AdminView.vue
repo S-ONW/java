@@ -114,7 +114,7 @@
           <table>
             <thead>
               <tr>
-                <th>券码</th><th>名称</th><th>类型</th><th>面值</th><th>门槛</th><th>已领取</th><th class="right">操作</th>
+                <th>券码</th><th>名称</th><th>类型</th><th>面值</th><th>门槛</th><th>获取方式</th><th>已领取</th><th class="right">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -124,6 +124,7 @@
                 <td>{{ c.type === 'pct' ? '折扣' : '立减' }}</td>
                 <td class="price">{{ c.amount }}</td>
                 <td>{{ c.cond }}</td>
+                <td>{{ sourceLabel(c.source) }}</td>
                 <td class="muted">{{ statsOf(c.code) }} 人</td>
                 <td class="right ops">
                   <button class="btn sm" @click="openCouponForm(c)">编辑</button>
@@ -131,7 +132,7 @@
                 </td>
               </tr>
               <tr v-if="!couponPool.length">
-                <td colspan="7" class="empty">暂无优惠券，点击「新增优惠券」添加</td>
+                <td colspan="8" class="empty">暂无优惠券，点击「新增优惠券」添加</td>
               </tr>
             </tbody>
           </table>
@@ -257,6 +258,13 @@
           </label>
           <label class="f" :class="{ err: couponErr.val }"><span>{{ couponDraft.type === 'pct' ? '减免比例 *（0.01~1，如 0.2 = 减 20% 即 8 折）' : '立减金额 *（元）' }}</span><input v-model="couponDraft.val" type="number" step="0.01" min="0" /><em v-if="couponErr.val">{{ couponErr.val }}</em></label>
           <label class="f" :class="{ err: couponErr.min }"><span>使用门槛（元，0=无门槛）</span><input v-model="couponDraft.min" type="number" min="0" step="1" /><em v-if="couponErr.min">{{ couponErr.min }}</em></label>
+          <label class="f"><span>获取方式</span>
+            <select v-model="couponDraft.source" class="sel">
+              <option value="claim">页面可直接领取</option>
+              <option value="newbie">新人专享（仅新注册账号可领）</option>
+              <option value="mine">仅扫雷闯关发放（不可直接领）</option>
+            </select>
+          </label>
           <label class="f wide"><span>说明</span><input v-model="couponDraft.desc" placeholder="一句话描述，如 全场通用" /></label>
         </div>
         <p class="err" v-if="couponFormErr">{{ couponFormErr }}</p>
@@ -420,6 +428,8 @@ const couponPool = computed(() => store.couponPool)
 
 // 每张券的已领取人数：来自 user_coupon 表统计（store.couponStats，由 loadCouponStats 拉取）
 const statsOf = (code) => store.couponStats[code] || 0
+// 获取方式的展示文案：mine = 扫雷专属，newbie = 新人专享，其它 = 可直接领
+const sourceLabel = (s) => (s === 'mine' ? '扫雷专属' : s === 'newbie' ? '新人专享' : '可直接领')
 const totalClaimed = computed(() =>
   Object.values(store.couponStats || {}).reduce((a, b) => a + (b || 0), 0)
 )
@@ -430,7 +440,7 @@ const couponEditing = ref(null)
 const couponFormErr = ref('')
 const couponErr = ref({})
 function blankCoupon() {
-  return { code: '', title: '', desc: '', type: 'fix', val: 10, min: 0 }
+  return { code: '', title: '', desc: '', type: 'fix', val: 10, min: 0, source: 'claim' }
 }
 const couponDraft = reactive(blankCoupon())
 

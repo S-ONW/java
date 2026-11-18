@@ -31,6 +31,13 @@ public class User {
      */
     private Integer permission;
 
+    /**
+     * 新人标识：1 = 新注册、还没领新人专享券（登录时前端据此弹出新人礼弹窗）
+     *           0 = 老用户 / 已经领过新人券
+     * 注册时落 1，领到新人券后由 CouponService 置 0，所以弹窗只对「刚注册的人」出现。
+     */
+    private Integer newbie;
+
     /** 注册时间 */
     private LocalDateTime createTime;
 
@@ -46,6 +53,8 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public Integer getPermission() { return permission; }
     public void setPermission(Integer permission) { this.permission = permission; }
+    public Integer getNewbie() { return newbie; }
+    public void setNewbie(Integer newbie) { this.newbie = newbie; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }

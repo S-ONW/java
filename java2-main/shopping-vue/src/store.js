@@ -1,5 +1,5 @@
 import { reactive, computed } from 'vue'
-import { PRODUCTS, COUPONS, COUPON_POOL, SHIP_FREE } from './data.js'
+import { PRODUCTS, COUPON_POOL, MINE_TIERS, SHIP_FREE } from './data.js'
 // ---------- localStorage 封装 ----------
 const LS = {
   get(k, d) {
@@ -112,14 +112,10 @@ export const cartSub = computed(() =>
   )
 )
 
-// 根据当前选中的优惠券 code 解析券信息（从动态优惠券池 couponPool 查询，兼容旧 COUPONS）
+// 根据优惠券 code 解析券信息：只认券池（数据库 coupon 表 / data.js 兜底）
 export function couponInfo(code) {
   if (!code) return null
-  const c = store.couponPool.find((x) => x.code === code)
-  if (c) return c
-  const old = COUPONS[code]
-  if (old) return { code, type: old.type, val: old.val, amount: old.label, min: 0 }
-  return null
+  return store.couponPool.find((x) => x.code === code) || null
 }
 
 // 计算某张券在当前订单小计 sub 下的减免金额；券不可用（未选/不满足门槛）返回 0
@@ -313,8 +309,19 @@ export function clearCoupon() {
 
 // ---------- 领券中心 ----------
 // 领取优惠券：未登录需先登录；重复领取同一张券会被拦截。
+// source 标识领券来源：'mine' = 扫雷小游戏达成条件，'claim' = 页面直接领取（默认）。
+// 券本身带 source 字段（数据库 coupon.source）：source = 'mine' 的券只能由扫雷游戏发放，
+// 任何页面直接调用都会被这里拦下来，后端 /api/coupon/claim 也会做同样的校验。
 // 优先写后端（POST /api/coupon/claim），后端未启动时回退 localStorage。
-export async function claimCoupon(code) {
+export async function claimCoupon(code, source) {
+  const src = source || 'claim'
+  const item = (store.couponPool || []).find((c) => c.code === code)
+  // 扫雷专属券：券池里的 source 标记 + 本地档位配置双保险（后端老版本不返回 source 时也能拦住）
+  const mineOnly = (item && item.source === 'mine') || MINE_TIERS.some((t) => t.code === code)
+  if (mineOnly && src !== 'mine') {
+    toast('这张券是扫雷闯关奖励，去扫雷小游戏里达成条件才能拿到')
+    return false
+  }
   if (!store.user) {
     toast('请先登录后再领取优惠券')
     return 'login'
@@ -323,16 +330,24 @@ export async function claimCoupon(code) {
     toast('这张优惠券你已经领过啦')
     return false
   }
+  // 新人专享券：只有 user.newbie = 1（刚注册、还没领过新人礼）的账号能领，
+  // 后端 /api/coupon/claim 会做同样的校验，这里先拦一道给出更快的提示。
+  if (item && item.source === 'newbie' && Number(store.user.newbie) !== 1) {
+    toast('这张券是新用户专享，仅限刚注册的账号领取')
+    return false
+  }
   const email = store.user.email || (store.user.name + '@shop.local')
   try {
     const r = await fetch(API + '/api/coupon/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code }),
+      body: JSON.stringify({ email, code, source: src }),
     })
     const res = await r.json()
     if (res.code === 200) {
       store.myCoupons.push(code)
+      // 领到新人券 → 新人标识置 0（后端已落库），之后登录不再弹新人礼弹窗
+      if (item && item.source === 'newbie' && store.user) store.user.newbie = 0
       save()
       toast('🎉 领取成功，已放入「我的优惠券」')
       return true
@@ -344,6 +359,7 @@ export async function claimCoupon(code) {
   } catch (e) {
     // 后端未启动 → 回退本地领取
     store.myCoupons.push(code)
+    if (item && item.source === 'newbie' && store.user) store.user.newbie = 0
     save()
     toast('🎉 领取成功（离线模式）')
     return true
@@ -367,6 +383,67 @@ export async function loadMyCoupons() {
 }
 
 export function toCheckout() { store.drawer = ''; go('checkout') }
+
+// ---------- 新人专享券 ----------
+// 券池里 source = 'newbie' 的那张就是新人券（现在是 NEWBIE50 ¥50 无门槛）。
+// 「是不是新人」以后端 user 表的 newbie 字段为准：注册时落 1，领到券后置 0，老用户默认 0，
+// 所以弹窗只会出现在「刚注册的账号」身上，不会打扰老用户。
+export function newbieCoupon() {
+  return (store.couponPool || []).find((c) => c.source === 'newbie') || null
+}
+
+/** 新人券当前状态：can = 现在能领（新注册且还没领过），got = 已经领到 */
+export function newbieState() {
+  const coupon = newbieCoupon()
+  if (!coupon) return { coupon: null, can: false, got: false }
+  const got = store.myCoupons.includes(coupon.code)
+  // 未登录时也算「可领」（点领取会先弹登录）；登录后必须是 newbie = 1
+  const fresh = !store.user || Number(store.user.newbie) === 1
+  return { coupon, can: fresh && !got, got }
+}
+
+// 「这个账号已经看过弹窗」的标记：按账号隔离存在本地。
+// 点了「暂不需要」就不再反复打扰，但券本身仍留在领券中心，随时可以领。
+function newbieShownKey() {
+  return 'shopNewbieShown_' + (userKey() || 'guest')
+}
+export function newbieShown() {
+  return LS.get(newbieShownKey(), false) === true
+}
+function markNewbieShown() {
+  LS.set(newbieShownKey(), true)
+}
+
+/**
+ * 登录成功后调用：新注册用户还没领过新人券 → 弹「新人专享大额券」。
+ * 触发时机在 App.vue 监听登录态变化里（延迟一点，等登录提示和页面切换先完成）。
+ */
+export function offerNewbieCoupon() {
+  if (store.modal) return false          // 已经开着别的弹窗，不打断
+  const s = newbieState()
+  if (!s.coupon || !s.can || !store.user) return false
+  if (newbieShown()) return false        // 这个账号已经看过一次了
+  markNewbieShown()
+  store.modal = 'newbie'
+  return true
+}
+
+/** 弹窗里点「立即领取」：走正常领券流程（后端会再验一次 newbie 标记） */
+export async function claimNewbieCoupon() {
+  const s = newbieState()
+  if (!s.coupon) { closeModal(); return false }
+  const ok = await claimCoupon(s.coupon.code, 'newbie')
+  if (ok === true) closeModal()
+  else if (ok === 'login') { closeModal(); openAuth('login') }
+  return ok
+}
+
+/** 弹窗里点「暂不需要」：关掉弹窗，券保留在领券中心，之后还能领 */
+export function dismissNewbieCoupon() {
+  markNewbieShown()
+  closeModal()
+  toast('新人券已保留在「领券中心」，随时可以领')
+}
 
 // ---------- 登录 / 注册 ----------
 export function openAuth(mode) { store.authMode = mode || 'login'; store.modal = 'auth' }
@@ -448,7 +525,8 @@ export async function submitRegister(nick, pwd, captchaToken, captcha) {
     const res = await r.json()
     if (res.code === 200) {
       // 注册用户一律默认权限 1；以后端返回的 permission 为准（后端不会接受前端传的权限）
-      saveLocalUser({ nick, pwd, permission: permOf(res.data) })
+      // 刚注册的账号标记为新人：登录后会弹「新人专享大额券」
+      saveLocalUser({ nick, pwd, permission: permOf(res.data), newbie: 1 })
       return { ok: true, msg: '注册成功' }
     }
     // 后端按邮箱判重 → 对应到昵称判重
@@ -462,7 +540,7 @@ export async function submitRegister(nick, pwd, captchaToken, captcha) {
     if (localUsers().some((u) => u.nick === nick)) {
       return { ok: false, msg: '该昵称已注册，请直接登录' }
     }
-    saveLocalUser({ nick, pwd, permission: PERMISSION_DEFAULT })
+    saveLocalUser({ nick, pwd, permission: PERMISSION_DEFAULT, newbie: 1 })
     return { ok: true, msg: '注册成功（离线模式，验证码未校验）' }
   }
 }
@@ -484,11 +562,13 @@ export async function submitAuth(name, pwd) {
     const res = await r.json()
     if (res.code === 200 && res.data) {
       // 后端返回 permission：0 = 管理员（首页显示后台按钮），1 = 默认权限（不显示）
+      // newbie：1 = 刚注册、还没领新人券 → 登录后弹新人礼弹窗
       store.user = {
         name: res.data.nick || nick,
         nick: res.data.nick || nick,
         email: res.data.email || nickToEmail(nick),
         permission: permOf(res.data),
+        newbie: Number(res.data.newbie) === 1 ? 1 : 0,
       }
       loadUserData()
       save()
@@ -507,6 +587,7 @@ export async function submitAuth(name, pwd) {
       nick: u.nick,
       email: u.email || nickToEmail(u.nick),
       permission: permOf(u),
+      newbie: Number(u.newbie) === 1 ? 1 : 0,
     }
     loadUserData()
     save()
@@ -854,6 +935,8 @@ function normalizeCoupon(body) {
     amount: body.type === 'pct' ? (Math.round((1 - +body.val) * 100) / 10) + ' 折' : '¥' + body.val,
     cond: (+(body.min || 0)) > 0 ? '满 ' + body.min + ' 可用' : '无门槛',
     min: +(body.min || 0),
+    // 获取方式：mine = 只能扫雷发奖，newbie = 新人专享；缺省按可直接领取处理
+    source: body.source === 'mine' ? 'mine' : body.source === 'newbie' ? 'newbie' : 'claim',
   }
 }
 
@@ -880,6 +963,9 @@ export async function adminSaveCoupon(c, original) {
     type: c.type,
     val: +c.val,
     min: +(c.min || 0),
+    // 获取方式：mine = 只能扫雷发奖，newbie = 新人专享
+    // （后台编辑扫雷 / 新人券时必须原样带上，否则会被改成可直接领）
+    source: c.source === 'mine' ? 'mine' : c.source === 'newbie' ? 'newbie' : 'claim',
   }
   // 离线模式登录（token='offline'）时不请求后端，直接改本地
   if (store.admin && store.admin.offline) return saveCouponLocal(body, original)

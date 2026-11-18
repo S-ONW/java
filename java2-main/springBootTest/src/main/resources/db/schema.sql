@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS product (
 --   原来券池写死在前端 data.js 的 COUPON_POOL 里，现在改为存库，后台增删改直接落表。
 --   type = pct → val 是减免比例（0.2 = 减 20%，即 8 折）；type = fix → val 是立减金额（元）
 --   min_amount = 使用门槛：订单商品小计 >= min_amount 才可用，0 表示无门槛
+--   source = 获取方式：claim = 页面可直接领；mine = 只能由扫雷小游戏达标发奖；
+--                         newbie = 新人专享（只有 user.newbie = 1 的账号能领）
 --   对应「谁领了哪张券」的表是 user_coupon（只存 user_email + coupon_code）
 -- 放在 user 升级段之前：空库时后面的 user 语句会报错中断（CLI 无 --force 时），
 -- 券池表必须在这之前建好，否则脚本一断就漏建表。
@@ -32,9 +34,20 @@ CREATE TABLE IF NOT EXISTS coupon (
     type        VARCHAR(8)   NOT NULL DEFAULT 'fix' COMMENT '类型：pct=折扣，fix=立减',
     val         DOUBLE       NOT NULL DEFAULT 0   COMMENT '面值：pct 为减免比例（0.2=减20%即8折），fix 为立减金额（元）',
     min_amount  INT          NOT NULL DEFAULT 0   COMMENT '使用门槛（订单小计 >= 该值可用，0=无门槛）',
+    source      VARCHAR(16)  NOT NULL DEFAULT 'claim' COMMENT '获取方式：claim=可直接领，mine=仅扫雷发奖',
     create_time DATETIME              DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     UNIQUE KEY uk_coupon_code (code)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '优惠券池表';
+
+-- 券池表在线升级：老库补 source 字段（幂等，MySQL 8 不支持 ADD COLUMN IF NOT EXISTS）
+SET @src_col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupon' AND COLUMN_NAME = 'source');
+SET @add_src_sql = IF(@src_col_exists = 0,
+    'ALTER TABLE coupon ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT ''claim'' COMMENT ''获取方式：claim=可直接领，mine=仅扫雷发奖''',
+    'SELECT 1');
+PREPARE add_src FROM @add_src_sql;
+EXECUTE add_src;
+DEALLOCATE PREPARE add_src;
 
 -- ---------------------------------------------------------------------------
 -- 用户表在线升级：新增 permission 权限字段（幂等，随应用启动自动执行）
@@ -54,6 +67,21 @@ SET @add_perm_sql = IF(@user_tbl_exists = 1 AND
 PREPARE add_perm FROM @add_perm_sql;
 EXECUTE add_perm;
 DEALLOCATE PREPARE add_perm;
+
+-- ---------------------------------------------------------------------------
+-- 用户表在线升级：新增 newbie 新人标识（幂等）
+--   newbie = 1 → 刚注册、还没领「新人专享大额券」，登录后前端会弹窗提示领取
+--   newbie = 0 → 老用户 / 已经领过新人券，不再弹窗（默认值就是 0，老库不会被误弹）
+-- 注册时由 UserService 落 1，领到新人券后由 CouponService 置 0。
+-- ---------------------------------------------------------------------------
+SET @add_newbie_sql = IF(@user_tbl_exists = 1 AND
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'newbie') = 0,
+    'ALTER TABLE `user` ADD COLUMN `newbie` TINYINT NOT NULL DEFAULT 0 COMMENT ''新人标识：1=新注册未领新人券，0=老用户/已领''',
+    'SELECT 1');
+PREPARE add_newbie FROM @add_newbie_sql;
+EXECUTE add_newbie;
+DEALLOCATE PREPARE add_newbie;
 
 -- 顺带修正旧库密码列还写着「MD5」的注释（仅当仍是旧注释时才执行）
 SET @fix_pwd_sql = IF(@user_tbl_exists = 1 AND
