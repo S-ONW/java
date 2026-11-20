@@ -11,7 +11,7 @@
  Target Server Version : 80039 (8.0.39)
  File Encoding         : 65001
 
- Date: 18/11/2026 09:55:00
+ Date: 20/11/2026 16:48:44
 */
 
 SET NAMES utf8mb4;
@@ -33,7 +33,7 @@ CREATE TABLE `coupon`  (
   `source` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'claim' COMMENT '获取方式：claim=可直接领，mine=仅扫雷发奖',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_coupon_code`(`code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 108 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券池表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 112 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券池表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of coupon
@@ -123,7 +123,7 @@ CREATE TABLE `user_coupon`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_coupon`(`user_email` ASC, `coupon_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 34 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户已领取优惠券表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_coupon
@@ -134,5 +134,6 @@ INSERT INTO `user_coupon` VALUES (25, 'demo@shop.local', 'MINE2', '2026-11-18 09
 INSERT INTO `user_coupon` VALUES (26, 'ww@shop.local', 'MINE2', '2026-11-18 09:31:51');
 INSERT INTO `user_coupon` VALUES (27, 'ww@shop.local', 'MINE5', '2026-11-18 09:32:05');
 INSERT INTO `user_coupon` VALUES (31, 'admin@shop.local', 'MINE5', '2026-11-18 09:45:28');
+INSERT INTO `user_coupon` VALUES (33, 'dd@shop.local', 'MINE5', '2026-11-20 15:48:22');
 
 SET FOREIGN_KEY_CHECKS = 1;
