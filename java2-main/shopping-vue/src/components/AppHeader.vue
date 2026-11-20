@@ -55,7 +55,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { store, cartCount, go, goHome, openCart, openWish, toggleTheme, openAccount, openLoginPage, openRegisterPage, isAdminUser, categories, catLabel, setCat, toast, openAuth } from '../store.js'
-import logoUrl from '../assets/logo.jpg'
+import logoUrl from '../assets/logo.png'
 import { SHOP_NAME } from '../brand.js'
 
 const keyword = ref(store.keyword)

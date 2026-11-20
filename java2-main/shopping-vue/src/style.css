@@ -40,7 +40,10 @@ header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-fil
 .nav{display:flex;align-items:center;gap:14px;padding:14px 20px;max-width:1200px;margin:0 auto}
 .logo{font-size:22px;font-weight:800;color:var(--primary);letter-spacing:.5px;white-space:nowrap;cursor:pointer}
 .logo span{color:var(--text)}
-.logo .logo-img{height:56px;width:auto;display:block;border-radius:10px}
+/* Logo 是透明底的卡通头像（logo.png），跟着头部底色自然贴合：不再有白底方块，也不用圆角裁切 */
+.logo .logo-img{height:56px;width:auto;display:block;filter:drop-shadow(0 2px 6px rgba(22,59,107,.18))}
+/* 深色头图下沿用站内 mascot 的处理方式：淡蓝柔光 + 投影，避免黑描边糊进底色，也不会再出现白方块 */
+[data-theme="dark"] .logo .logo-img{filter:drop-shadow(0 0 5px rgba(150,195,255,.50)) drop-shadow(0 0 11px rgba(150,195,255,.22)) drop-shadow(0 6px 14px rgba(0,0,0,.55))}
 .search{flex:1;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:8px 16px;gap:8px;min-width:0}
 .search input{flex:1;border:none;background:transparent;outline:none;font-size:14px;color:var(--text)}
 .search button{background:var(--primary);color:#fff;border-radius:999px;padding:6px 18px;font-weight:600;white-space:nowrap}

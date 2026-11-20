@@ -117,7 +117,10 @@ npm run dev
   改完必须 `vite build` 再同步 dist 到 `springBootTest/{src/main/resources,target/classes}/static`，
   否则页面上是新的、浏览器标签页还是旧的。
 - 历史名：云购商城 → 萧逸商城 → 逸如反掌商城（旧的「云购 / ShopCloud」只出现在历史记忆与 git 历史里，代码已无残留）。
-- Logo 是 `src/assets/logo.jpg` 图片（卡通头像，不含文字），改名不需要动它。
+- Logo 是 `src/assets/logo.png` 图片（卡通头像，不含文字），改名不需要动它。
+  原图 `logo.jpg` 是纯白底，直接放进深色头图里会露出一个白方块；现已抠成透明 PNG（沿用 mascot 的贴纸风格），
+  `style.css` 里 `.logo .logo-img` 用 `drop-shadow` 出投影，暗色主题再叠一层淡蓝冷光晕，和 `.mascot` 的处理保持一致。
+  `logo.jpg` 只作为原图留档，代码不再引用。
 
 ## 吉祥物表情包（2026-11-11 起）
 
