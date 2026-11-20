@@ -10,8 +10,19 @@
     <!-- 首屏：左栏插画（与注册页同一个角色、同一排版，换成了街景那张），右栏精选企划轮播 -->
     <!-- 只在「全部商品」时出现；切到数码电子等具体分类就收起，直接进入商品列表 -->
     <Transition name="hero" appear>
-      <section v-if="showHero" class="hero" @mouseenter="pause" @mouseleave="resume">
-      <div class="hero-art" :style="{ backgroundImage: 'url(' + homeHero + ')' }">
+      <section v-if="showHero" ref="heroEl" class="hero" @mouseenter="onHeroEnter" @mouseleave="onHeroLeave">
+      <!-- 左栏插画：悬停 → 右栏原地预览宣传片；点击仍可直接去 B 站看完整版 -->
+      <a
+        class="hero-art"
+        :href="PROMO_VIDEO"
+        target="_blank"
+        rel="noopener noreferrer"
+        :style="{ backgroundImage: 'url(' + homeHero + ')' }"
+        title="点击去 B 站看完整版"
+        aria-label="宣传片入口：点击在新窗口打开 B 站视频"
+        @mouseenter="onArtEnter"
+      >
+        <span class="art-play" aria-hidden="true">▶ 观看宣传片</span>
         <div class="art-copy">
           <span class="rule"></span>
           <ul>
@@ -21,9 +32,9 @@
             <li>七天无理由退换货</li>
           </ul>
         </div>
-      </div>
+      </a>
 
-      <div class="hero-main">
+      <div class="hero-main" :class="{ 'is-preview': preview }">
         <div class="stage">
           <div
             v-for="(b, i) in BANNERS"
@@ -55,6 +66,40 @@
             ></button>
           </div>
         </div>
+
+        <!-- 悬停插画时原地浮出的预览层：盖住右栏企划，移开即收（组件卸载顺带掐掉声音） -->
+        <Transition name="prev">
+          <div v-if="preview" class="preview">
+            <!-- 播放器起播要一两秒：这段时间铺视频封面（虚化）撑住画面，不留黑底 -->
+            <div
+              class="preview-poster"
+              :class="{ 'is-gone': revealed }"
+              :style="{ backgroundImage: `url(${promoCover})` }"
+              aria-hidden="true"
+            ></div>
+            <iframe
+              :key="previewNonce"
+              :class="{ 'is-live': revealed }"
+              :src="PROMO_EMBED"
+              title="宣传片预览"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+              allowfullscreen
+              frameborder="0"
+              scrolling="no"
+              @load="onFrameLoad"
+            ></iframe>
+            <div v-if="!revealed" class="preview-skel">
+              <span class="spin" aria-hidden="true"></span>
+              <span class="skel-t">正在接入 B 站播放器…</span>
+              <span class="skel-s">《光与夜之恋》萧逸生日活动 · 一盏朝夕</span>
+              <span class="preview-progress" aria-hidden="true"></span>
+            </div>
+            <div class="preview-bar">
+              <span>宣传片预览 · 移开鼠标即收起</span>
+              <a :href="PROMO_VIDEO" target="_blank" rel="noopener noreferrer">去 B 站看完整版 ↗</a>
+            </div>
+          </div>
+        </Transition>
       </div>
     </section>
     </Transition>
@@ -124,6 +169,8 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { store, catLabel, setRate, setPage, applyFilter, go, setCat } from '../store.js'
 import mascotDizzy from '../assets/mascot/dizzy.png'
 import homeHero from '../assets/home-hero.webp'
+// 宣传片封面（B 站官方 cover，拉不到播放器时就拿它撑住画面，避免一块黑底）
+import promoCover from '../assets/promo-cover.webp'
 import { BANNERS } from '../data.js'
 import ProductCard from './ProductCard.vue'
 
@@ -131,6 +178,73 @@ const current = ref(0)
 const minP = ref(null)
 const maxP = ref(null)
 const gridTop = ref(null)
+
+// 首屏插画（街道那张）悬停即预览宣传片；点击仍去 B 站看完整版
+const PROMO_BVID = 'BV1irWB6wEqF'
+// 起播位置（秒）。5 = 从 0:05 开始：每次预览、每次点开 B 站都从这里起，不会被上次看到哪儿带偏
+const PROMO_START = 5
+const PROMO_VIDEO =
+  `https://www.bilibili.com/video/${PROMO_BVID}` + (PROMO_START ? `?t=${PROMO_START}` : '')
+// 官方外链播放器：autoplay 让它进来就开始播（浏览器没给自动播放权限时停在封面，点一下即可）
+// t 必须显式给死——不给 t 时播放器会沿用上次的观看进度，预览就"接着上次"而不是从设定的起播点开始
+const PROMO_EMBED =
+  `https://player.bilibili.com/player.html?bvid=${PROMO_BVID}&page=1&t=${PROMO_START}` +
+  '&autoplay=1&danmaku=0&high_quality=1&as_wide=1'
+
+// ---------- 悬停插画 → 右栏原地预览宣传片 ----------
+const heroEl = ref(null)
+const preview = ref(false)      // 预览层是否显示
+const revealed = ref(false)      // 播放器真的接管画面了没（此前铺封面 + 转圈）
+// 每开一次预览就换一个 key：强制重建 iframe，不给浏览器复用旧文档、不让播放器续上上一次的进度
+const previewNonce = ref(0)
+// 触屏没有 hover，不启用预览，保持「点图去 B 站」
+const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+let enterTimer = null
+let revealTimer = null
+
+function cancelEnter() {
+  if (enterTimer) { clearTimeout(enterTimer); enterTimer = null }
+}
+function cancelReveal() {
+  if (revealTimer) { clearTimeout(revealTimer); revealTimer = null }
+}
+// iframe 的 load 只是播放器文档就绪，视频第一帧还要再等 0.5~0.8s；
+// 所以再等 780ms 才把画面交给播放器，中间继续铺封面，视觉上不出现黑屏
+function onFrameLoad() {
+  cancelReveal()
+  revealTimer = setTimeout(() => { revealed.value = true; revealTimer = null }, 780)
+}
+// 60ms 的轻缓冲：鼠标只是扫过不会闪出来，真正停住就立刻有反应
+function onArtEnter() {
+  if (!canHover || preview.value || enterTimer) return
+  enterTimer = setTimeout(() => {
+    enterTimer = null
+    revealed.value = false
+    cancelReveal()
+    // 换 key → iframe 全新加载 → 每次悬停都从 PROMO_START 那一秒重新开始
+    previewNonce.value += 1
+    preview.value = true
+  }, 60)
+}
+function closePreview() {
+  cancelEnter()
+  cancelReveal()
+  if (preview.value) preview.value = false
+}
+function onHeroEnter() { pause() }
+function onHeroLeave() { resume() }
+
+// 指针真的离开整张卡片才收起。滑块滑进 iframe 时父文档收不到 mousemove，
+// 所以只靠 .hero 的 mouseleave 会误判（一进播放器就收），改成按坐标判断
+function onDocMove(e) {
+  if (!preview.value || !heroEl.value) return
+  const r = heroEl.value.getBoundingClientRect()
+  const pad = 4
+  if (e.clientX <= r.left - pad || e.clientX >= r.right + pad ||
+      e.clientY <= r.top - pad || e.clientY >= r.bottom + pad) {
+    closePreview()
+  }
+}
 
 // 首屏轮播：右键悬停时暂停，离开后继续，避免用户正在读文案时被切走
 let timer = null
@@ -143,8 +257,22 @@ function pause() {
 }
 function resume() { start() }
 
-onMounted(start)
-onUnmounted(pause)
+onMounted(() => {
+  start()
+  // 预览层的「移开就收」靠这两个全局监听兜底（含鼠标移出整个窗口）
+  document.addEventListener('mousemove', onDocMove, { passive: true })
+  document.documentElement.addEventListener('mouseleave', closePreview)
+  // 一边预览一边滚走会留下孤零零的一块预览，滚动就直接收掉
+  window.addEventListener('scroll', closePreview, { passive: true })
+})
+onUnmounted(() => {
+  pause()
+  cancelEnter()
+  cancelReveal()
+  document.removeEventListener('mousemove', onDocMove)
+  document.documentElement.removeEventListener('mouseleave', closePreview)
+  window.removeEventListener('scroll', closePreview)
+})
 // 手动点小圆点时，把计时重新起步（让刚选中的这一屏能完整停留）
 watch(current, () => { pause(); start() })
 
@@ -155,6 +283,7 @@ watch(showHero, (on) => {
     current.value = 0
     start()
   } else {
+    closePreview()
     pause()
     // 横幅收起后页面会整体上移，如果当时已经往下滚了，顺手回到顶部，避免内容"跳一下"
     if (window.scrollY > 80) window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -268,6 +397,23 @@ function onBanner(b) {
     linear-gradient(90deg, rgba(15, 33, 55, .46) 0%, rgba(15, 33, 55, .16) 44%, rgba(15, 33, 55, 0) 68%);
 }
 .art-copy { position: relative; z-index: 1; }
+
+/* 整块插画是一个链接：悬停时微微提亮，同时右栏换成宣传片预览 */
+.hero-art { text-decoration: none; cursor: pointer; transition: filter .25s ease; }
+.hero-art:hover { filter: saturate(1.08) brightness(1.06); }
+.hero-art:focus-visible { outline: 2px solid var(--street-cyan); outline-offset: -4px; }
+/* 有 hover 的设备上，预览层本身就是提示，这枚贴片反而多余；只在触屏上常驻，
+   否则没人知道这张图能点（触屏点开的是 B 站完整版） */
+.art-play {
+  position: absolute; right: 16px; bottom: 16px; z-index: 2;
+  display: none; align-items: center; gap: 7px;
+  font-family: var(--display); font-weight: 700; font-size: 11.5px; letter-spacing: .1em;
+  color: #fff; padding: 7px 13px; border-radius: 999px;
+  background: rgba(8, 18, 33, .74); border: 1px solid rgba(255, 255, 255, .34);
+  backdrop-filter: blur(6px); box-shadow: 0 6px 16px rgba(4, 12, 26, .45);
+  pointer-events: none;
+}
+@media (hover: none) { .art-play { display: inline-flex; } }
 
 /* 小标：按插画里的街牌做成贴纸标签——左边一道霓虹红、右角斜切、整块微微歪着 */
 .eyebrow {
@@ -384,6 +530,72 @@ function onBanner(b) {
 }
 .pip:hover { background: var(--muted); }
 .pip.on { width: 34px; background: var(--primary); }
+
+/* ---------- 悬停插画时的宣传片预览层 ---------- */
+/* 企划文案先轻轻上收淡出，预览层再压上来，两层错开一点点才不显得「跳」 */
+.stage, .hero-foot { transition: opacity .24s ease, transform .24s ease; }
+.hero-main.is-preview .stage,
+.hero-main.is-preview .hero-foot { opacity: 0; transform: translateY(-8px); transition: opacity .14s ease, transform .18s ease; }
+
+.preview { position: absolute; inset: 0; z-index: 4; overflow: hidden; background: #0b1220; }
+/* 加载期铺封面（略微虚化），起播后再慢慢淡出：千万不能留一块纯黑让人干等 */
+.preview-poster {
+  position: absolute; inset: 0 0 30px 0; z-index: 0;
+  background-size: cover; background-position: center;
+  transform: scale(1.08);
+  filter: blur(9px) saturate(1.06) brightness(.9);
+  transition: opacity .46s ease;
+}
+.preview-poster.is-gone { opacity: 0; }
+/* 播放器只占 30px 那根说明条以上的区域，别和它自己的控制栏抢位置 */
+.preview iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 30px); border: 0; display: block;
+  z-index: 1; opacity: 0; transition: opacity .46s ease;
+}
+/* 播放器真正出画面后再淡入，接住封面淡出的那一拍 */
+.preview iframe.is-live { opacity: 1; }
+.preview-skel {
+  position: absolute; inset: 0 0 30px 0; z-index: 2; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  font-family: var(--sans-strong); font-size: 12px; letter-spacing: .18em; text-indent: .18em;
+  color: rgba(232, 242, 255, .9);
+  text-shadow: 0 1px 10px rgba(4, 10, 22, .8);
+}
+.preview-skel .skel-s {
+  font-family: var(--sans); font-size: 11px; letter-spacing: .08em; text-indent: .08em;
+  color: rgba(226, 238, 252, .62);
+}
+/* 一条来回扫的细条：有动效，等待就不像卡死 */
+.preview-progress {
+  position: absolute; left: 0; bottom: 0; width: 34%; height: 3px; border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, transparent, rgba(122, 212, 255, .9), transparent);
+  animation: prevslide 1.15s cubic-bezier(.45, .05, .4, .95) infinite;
+}
+@keyframes prevslide {
+  0% { transform: translateX(-40%); opacity: .35; }
+  50% { opacity: 1; }
+  100% { transform: translateX(320%); opacity: .35; }
+}
+.spin {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgba(122, 212, 255, .3); border-top-color: #7ad4ff;
+  animation: prevspin .7s linear infinite;
+}
+@keyframes prevspin { to { transform: rotate(360deg); } }
+.preview-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30px; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 0 14px; background: #0b1220;
+  font-size: 11.5px; letter-spacing: .06em; color: rgba(226, 238, 252, .6);
+}
+.preview-bar a { color: #7ad4ff; font-weight: 600; }
+.preview-bar a:hover { text-decoration: underline; }
+
+/* 进出都短：鼠标停住的瞬间就出来，移开立刻收，不做花哨缓动 */
+.prev-enter-active { transition: opacity .16s ease, transform .2s cubic-bezier(.2, .9, .3, 1); }
+.prev-leave-active { transition: opacity .13s ease, transform .13s ease; }
+.prev-enter-from { opacity: 0; transform: translateY(8px); }
+.prev-leave-to { opacity: 0; transform: translateY(4px); }
 
 /* ---------- 商品区标题栏 ---------- */
 .toolbar {

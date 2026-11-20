@@ -142,6 +142,40 @@ npm run dev
   抠图不能按「离白色多远」算 alpha（浅色皮肤会被当成半透明，放到深色底上整张脸发黑）：
   正确做法是从四边洪水填充出外部背景，只在边界一圈做去白反解。
 
+## 首屏插画 = 悬停预览宣传片（2026-11-20 起）
+
+首页首屏左侧那张街景插画（`HomeView.vue` 的 `.hero-art`）悬停一下，右栏企划文案原地换成 B 站外链播放器开始预览，
+鼠标移开就收回企划原文案；插画本身仍是 `<a>`，点它在新窗口打开完整版
+`https://www.bilibili.com/video/BV1irWB6wEqF`。换视频只改 `PROMO_BVID`，起播点改 `PROMO_START`（秒，现在是 `5`，即 0:05）。
+
+- **起播点固定**：`PROMO_START = 5`（秒，即 0:05），同时喂给 `PROMO_VIDEO`（`?t=5`）和 `PROMO_EMBED`（`&t=5`）。
+  `t` 在 embed 地址里必须显式写——不给 `t` 时 B 站播放器会沿用上次的观看进度，
+  预览就变成"接着上次看到哪儿"，而不是从设定点开始。另外每次开预览都会 `previewNonce++` 换 iframe 的 `:key`，
+  强制重建文档，避免浏览器复用旧 iframe 把进度带过来。
+
+- 预览层 `.preview` 挂在 `.hero-main` 里，`position:absolute; inset:0`，下面留 30px 给 `.preview-bar`
+  （说明文字 + 「去 B 站看完整版」）。iframe 高度要用 `calc(100% - 30px)`，只写 `height:100%` 会把
+  播放器自己的控制栏压到说明条底下。
+- **收起判定不要用 `.hero` 的 `mouseleave`**：指针一旦滑进 iframe，父文档就收不到事件了，
+  `mouseleave` 会在进入播放器那一瞬间触发，预览直接被收掉。现在改成 `document` 上监听 `mousemove`
+  按 `getBoundingClientRect()` 判断坐标，指针在 iframe 里时干脆没有事件 → 自然保持显示。
+  另外补了「移出整个窗口（`documentElement mouseleave`）」和「滚动」两条兜底。
+- 收起时靠 `v-if` 卸载 iframe（`<Transition name="prev">` 的离场动画结束后才真正移除），
+  这样能顺带掐断可能还在播的声音；所以每次悬停都是一次新加载。
+- **加载期不能留黑底**：B 站播放器从建 iframe 到出第一帧要 2~3 秒（实测冷启动约 2.8s、缓存热约 1.3s），
+  这段时间铺 `.preview-poster`（`assets/promo-cover.webp`，视频官方封面，`blur(9px)` + 轻微放大），
+  加上转圈、「正在接入 B 站播放器…」和一条来回扫的 `.preview-progress`，让人看得出是在加载而不是卡死。
+  - 交接时机：iframe 的 `load` 只代表播放器文档就绪，视频第一帧还要再等 0.5~0.8s，
+    所以 `onFrameLoad` 里再延 `780ms` 才把 `revealed` 置真；随后封面淡出 `.46s`、播放器同步淡入，
+    两段淡入淡出叠着走，中间不会闪出黑块（改这两个数之前先量一下，别把黑缝露出来）。
+  - 想换封面就替换 `src/assets/promo-cover.webp`（16:9，720px 宽够用，反正是虚化的）。
+- 进场上做了 60ms 缓冲：只是扫过不会闪，停住就出来；企划文案先淡出上移 `8px`，预览层再压上来，两层错开才不跳。
+- 触屏（`(hover: hover) and (pointer: fine)` 为假）不启用预览，保持「点图去 B 站」，此时 `.art-play` 贴片常驻当提示。
+- `index.html` 里加了 `preconnect` 指向 `player.bilibili.com`、`api.bilibili.com`、`s1.hdslb.com`
+  （播放器 JS 就在 s1 上），`dns-prefetch` 指向封面 CDN 和视频源 `upos-sz-estgoss.bilivideo.com`。
+  实测冷启动从 3.2s 降到 2.8s；别再贪多加 preconnect，会把自家首屏请求挤掉。
+- 别把 `target="_blank"` 的 `rel="noopener noreferrer"` 删掉，外链一律这么写。
+
 ## 已知小毛病（不影响启动）
 
 - `application.properties` 引用的 `test`、`book.bookid` 配置不存在，仅影响 `/user/test` 演示接口显示 null
